@@ -143,7 +143,7 @@ Agent(
 
 ```
 CCB_CALLER=claude ask codex "
-[HIVE CONSENSUS REQUEST — {{TEAM_ID}}]
+[HIVE CONSENSUS REQUEST — {{TEAM_ID}} — R{{ROUND_NUM}}]
 
 당신은 {{MODULE_NAME}} 모듈의 담당 에이전트입니다.
 
@@ -275,7 +275,7 @@ Codex와 동일 구조, `ask codex` → `ask gemini`으로 변경.
 
 ```
 CCB_CALLER=claude ask gemini "
-[HIVE CONSENSUS REQUEST — {{TEAM_ID}}]
+[HIVE CONSENSUS REQUEST — {{TEAM_ID}} — R{{ROUND_NUM}}]
 ... (Codex 합의 프롬프트와 동일 구조)
 "
 ```

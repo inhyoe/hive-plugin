@@ -285,7 +285,7 @@ Step C: 의존성 → 실행 순서 (topological sort)
 2. 각 팀에 최소 1 에이전트
 3. 복잡도 높은 팀 = Claude sonnet/opus
 4. 대량 반복 작업 = Gemini
-5. 코드 구현 중심 = Codex (**최소 2개 모듈 직접 할당**)
+5. 코드 구현 중심 = Codex (대규모 6+: **최소 2개**, 중소 3-5: **최소 1개** 직접 할당)
 6. 한 팀에 여러 프로바이더 혼합 가능
 7. **팀 구성안에 프로바이더 분배 비율을 반드시 명시**
 
@@ -407,7 +407,7 @@ Wave 완료 조건: 해당 Wave 모든 팀 completed → 다음 Wave 실행
 | 상황 | 동작 |
 |------|------|
 | Claude 에이전트 실패 | 에러 확인 → 리드 재시도 또는 직접 처리 |
-| CCB 타임아웃 | pend 재시도 (최대 3회) → 실패 시 ⛔ AskUserQuestion |
+| CCB 타임아웃 | soft 3min pend 확인 → hard 10min 에스컬레이션 (hive-consensus.md §4 참조) → 실패 시 ⛔ AskUserQuestion |
 | 구현이 CONSENSUS와 불일치 | 리드 diff 검토 → 재지시 또는 직접 수정 |
 | Wave 중 하나 실패 | 해당 Wave 중단 → 의존 Wave 대기 → ⛔ AskUserQuestion |
 
