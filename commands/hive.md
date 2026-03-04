@@ -5,7 +5,7 @@ allowedTools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, Agent, TeamC
 
 # /hive - Multi-Orchestration Team Builder
 
-> **Version**: 1.0.0
+> **Version**: 1.3.0
 > **참조 스킬**: `hive-workflow.md`, `hive-consensus.md`, `hive-spawn-templates.md`
 
 $ARGUMENTS
@@ -39,11 +39,68 @@ Phase 5 (Execute)로 진행할 수 있습니다.
 어떤 예외도 없습니다.
 </hard_gate>
 
+<hard_gate rule="BIDIRECTIONAL_COMMUNICATION">
+일방적 소통 금지 — 리드와 에이전트 간 양방향 대화 필수.
+
+통신 방식 (프로바이더별):
+  - Claude Agent: SendMessage(recipient, content)
+  - CCB (Codex/Gemini): /ask + pend (stateless, 각 요청에 round_id/team_id 포함)
+
+Phase 4 (합의):
+  1. TASK PROPOSAL 전용 프롬프트로 에이전트 스폰 (구현 지시 포함 금지)
+  2. 에이전트 응답(AGREE/COUNTER/CLARIFY) 수신 → 리드가 반드시 응답
+     - Claude Agent: SendMessage로 응답
+     - CCB: /ask로 후속 메시지 전송
+  3. COUNTER → 수용/부분수용/거절 근거와 함께 재제안
+  4. CLARIFY → 추가 정보 제공 후 에이전트 재판단 대기
+  5. 최소 1라운드의 실제 대화가 있어야 CONSENSUS 인정
+
+Phase 5 (구현):
+  1. CONSENSUS 확정 후에만 구현 프롬프트 전송 (별도 스폰 또는 메시지)
+  2. 에이전트 중간 보고/질문 수신 → 리드가 반드시 응답
+  3. 구현 결과물 수신 → 리드가 CONSENSUS 대비 검증 후 피드백
+
+금지:
+  - 합의 프롬프트 + 구현 지시를 하나로 합치기 X
+  - 에이전트 응답 무시하고 결과만 수집 X
+  - 에이전트에게 응답 없이 셧다운 X
+</hard_gate>
+
+<hard_gate rule="CODEX_MUST_IMPLEMENT">
+Codex는 구현자이다 — 리뷰어로만 사용 금지.
+  - 대규모 작업 (6+ 모듈): 최소 2개 모듈을 Codex에게 직접 구현 할당
+  - 중소 작업 (3-5 모듈): 최소 1개 모듈을 Codex에게 직접 구현 할당
+Codex에게 구현 위임 시 반드시:
+  1. 수정 대상 심볼의 전체 코드 + 참조 타입/인터페이스 시그니처 포함
+     (토큰 제한 고려 — 전체 파일 대신 관련 섹션 허용)
+  2. 구체적 수정 지시 (파일명 + 함수/클래스 수준)
+  3. `flutter analyze` 실행 요청 (Codex quick scan + 리드 post-Wave deep scan)
+사후 리뷰만 맡기는 것은 이 규칙 위반이다.
+</hard_gate>
+
+<hard_gate rule="MULTI_PROVIDER_DISTRIBUTION">
+Claude 에이전트 독점 금지.
+팀 구성 시 멀티 프로바이더 분배:
+  - Claude: 핵심 로직 + 아키텍처 (50-60%)
+  - Codex: 직접 구현 + 리팩터링 (20-30%)
+  - Gemini: 사전 리서치 + 테스트/문서 (10-20%)
+적용 기준:
+  - 대규모 (6+ 모듈): 위 비율 hard gate로 강제
+  - 중소 (3-5 모듈): 위 비율을 guidance로 적용 (최소 Codex 1개 모듈 필수)
+Phase 3 팀 구성안에 프로바이더 분배 비율을 명시해야 한다.
+</hard_gate>
+
 절대 금지:
 - Serena 컨텍스트 없이 팀 구성 X
 - 사용자 확인 없이 팀 생성 X
 - CONSENSUS 없이 구현 착수 X
 - AskUserQuestion 스킵 X
+- Claude 에이전트로만 팀 구성 X (멀티 프로바이더 필수)
+- Codex를 리뷰/감사로만 사용 X (구현 할당 필수)
+- Gemini 리서치를 메모리에만 저장하고 미적용 X
+- 에이전트 응답 무시하고 결과만 수집 X (양방향 대화 필수)
+- 합의+구현을 하나의 프롬프트로 합치기 X (Phase 4→5 분리 필수)
+- 에이전트에게 SendMessage 응답 없이 셧다운 X
 </mindset>
 
 ---
@@ -65,12 +122,17 @@ Phase 3: Team Decomposition (팀 분해)
   → 모듈 클러스터링 → 프로바이더 배치 → ⛔ 팀 구성안 사용자 확인
   → 참조: hive-workflow.md § Phase 3
 
-Phase 4: Consensus Loop (합의)
-  → TeamCreate → 에이전트 스폰 → 병렬 개별 합의 → CONSENSUS 도달
+Phase 4: Consensus Loop (합의) ⚠️ 양방향 대화 필수
+  → TeamCreate → 에이전트 스폰 (TASK PROPOSAL만)
+  → 에이전트 응답 수신 → 리드 SendMessage 응답
+  → AGREE/COUNTER/CLARIFY 루프 → CONSENSUS 도달
+  → ❌ 합의+구현을 하나로 합치기 금지
   → 참조: hive-consensus.md
 
-Phase 5: Execute & Monitor (실행)
-  → Wave 기반 실행 → 결과 수집 → 통합 → 셧다운
+Phase 5: Execute & Monitor (실행) ⚠️ 중간 체크 필수
+  → CONSENSUS 기반 구현 프롬프트 전송 (별도 스폰/메시지)
+  → 에이전트 중간 보고 수신 → 리드 피드백
+  → 결과 수집 → CONSENSUS 대비 검증 → 통합 → 셧다운
   → 참조: hive-workflow.md § Phase 5, hive-spawn-templates.md
 ```
 

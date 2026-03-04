@@ -220,18 +220,74 @@ Step C: 의존성 → 실행 순서 (topological sort)
 
 | 작업 성격 | Provider | 이유 |
 |-----------|----------|------|
-| 핵심 로직 / 아키텍처 | **Claude** (Agent tool) | 복잡한 추론, 설계 판단 |
-| 구현 / 리팩터링 | **Codex** (cask) | 코드 생성 강점 |
-| 테스트 작성 / 문서 | **Gemini** (gask) | 대량 토큰, 반복 작업 |
+| 핵심 로직 / 아키텍처 설계 | **Claude** (Agent tool) | 복잡한 추론, 설계 판단 |
+| 직접 구현 / 리팩터링 | **Codex** (`/ask codex`) | 코드 생성 강점, 구체적 파일 수정 |
+| 사전 리서치 / 체크리스트 | **Gemini** (`/ask gemini`) | Phase 1에서 먼저 호출, 기준 확보 |
+| 테스트 작성 / 문서 | **Gemini** (`/ask gemini`) | 대량 토큰, 반복 작업 |
 | 간단한 수정 / 설정 | **Claude haiku** (Agent tool) | 빠른 처리, 저비용 |
+
+#### 프로바이더 분배 비율 (MANDATORY)
+
+```
+대규모 작업 (6+ 모듈) — hard gate:
+  Step 0: Gemini → 리서치/체크리스트 확보 (에이전트 스폰 전)
+  Step 1: Codex → 아키텍처 사전 리뷰 (에이전트 스폰 전)
+  Step 2 (병렬 구현):
+    Claude 에이전트 50-60% → 핵심 UI/로직 모듈
+    Codex 20-30% → 2-3개 모듈 직접 구현 (/ask codex로 파일 내용 + 구체적 수정 지시)
+    Gemini 10-20% → 접근성/l10n/문서 관련 모듈
+  Step 3 (교차 검증):
+    Codex → Claude 수정 코드 리뷰 (변경 diff + CONSENSUS 기준 제공)
+    Claude → Codex 수정 코드 검증 (변경 diff + CONSENSUS 기준 제공)
+    수락 기준: CONSENSUS 일치 + flutter analyze 통과
+    타임아웃: 교차 검증 5분 내 미완료 시 리드가 직접 검증
+
+중소 작업 (3-5 모듈) — guidance:
+  Claude → 핵심 2-3개
+  Codex → 최소 1개 직접 구현
+  Gemini → 리서치 (필요 시)
+```
+
+❌ 금지 패턴:
+- Claude 에이전트 10개 독점 → Codex/Gemini 사후 첨가
+- Codex를 리뷰어로만 사용 (구현 능력 낭비)
+- Gemini 리서치 결과를 메모리에만 저장하고 실제 미적용
+
+#### Codex에게 구현 위임하는 방법
+
+```
+/ask codex "[HIVE IMPLEMENTATION — {{TEAM_ID}}]
+
+{{MODULE_NAME}} 모듈의 아래 파일들을 수정해줘:
+
+## 수정 대상
+1. {{FILE_PATH_1}} — {{구체적 수정 내용}}
+2. {{FILE_PATH_2}} — {{구체적 수정 내용}}
+
+## 파일 내용
+\`\`\`dart
+{{실제 파일 내용 또는 git diff}}
+\`\`\`
+
+## 규칙
+- CONSENSUS 범위만 구현
+- 기존 코드 스타일 준수
+- 수정 후 flutter analyze 실행해서 결과 알려줘
+
+## 완료 보고
+- 변경 파일 목록
+- 핵심 변경 요약 (diff 형태)
+- CONSENSUS 일치 여부 자체 검증"
+```
 
 배치 규칙:
 1. 팀 리드 = 항상 Claude main (오케스트레이터)
 2. 각 팀에 최소 1 에이전트
 3. 복잡도 높은 팀 = Claude sonnet/opus
 4. 대량 반복 작업 = Gemini
-5. 코드 구현 중심 = Codex
+5. 코드 구현 중심 = Codex (**최소 2개 모듈 직접 할당**)
 6. 한 팀에 여러 프로바이더 혼합 가능
+7. **팀 구성안에 프로바이더 분배 비율을 반드시 명시**
 
 ### 3-3. 팀 구성안 출력
 
@@ -240,16 +296,27 @@ Step C: 의존성 → 실행 순서 (topological sort)
 ```markdown
 ## 🐝 Hive Team Plan
 
+### 프로바이더 분배
+| Provider | 모듈 수 | 비율 | 역할 |
+|----------|--------|------|------|
+| Claude   | N개    | 55%  | 핵심 로직, 아키텍처 |
+| Codex    | N개    | 25%  | 직접 구현, 리팩터링 |
+| Gemini   | N개    | 20%  | 리서치, 테스트, 문서 |
+
 ### 실행 순서: T1 → T2 → [T3, T4] (병렬) → T5
 
 | 팀 ID | 모듈 | 에이전트 | Provider | 태스크 요약 |
 |-------|------|---------|----------|------------|
 | T1-xxx | module_a | agent-a | Claude sonnet | ... |
-| T2-xxx | module_b | agent-b | Codex | ... |
+| T2-xxx | module_b | agent-b | **Codex** | ... |
+| T3-xxx | module_c | agent-c | **Codex** | ... |
+| T4-xxx | module_d | agent-d | Gemini | ... |
 
 ### 의존성
 T2 blocked_by: [T1]
 ```
+
+**필수 검증**: 대규모(6+)에서 Codex 직접 구현 모듈 최소 2개, 중소(3-5)에서 최소 1개 포함 확인.
 
 ### 3-4. 사용자 확인 (⛔ 필수)
 
@@ -284,29 +351,56 @@ Phase 3의 의존성 그래프 (topological sort) 기반:
 스폰 방법은 `hive-spawn-templates.md` 참조.
 
 ```
+사전 준비 (에이전트 스폰 전):
+  Gemini → 리서치/체크리스트 확보 (결과를 에이전트 프롬프트에 "기준"으로 직접 포함)
+  Codex → 아키텍처 사전 리뷰 (결과를 에이전트 지침에 반영)
+
 Claude 에이전트:
   Agent tool (subagent_type="general-purpose")
   → team_name 지정, isolation="worktree"
   → CONSENSUS 문서 + Serena 컨텍스트를 프롬프트에 포함
 
-Codex 에이전트:
-  Bash("CCB_CALLER=claude ask codex \"$PROMPT\"")
-  → CONSENSUS를 프롬프트에 inline 포함
+Codex 에이전트 (직접 구현 — MANDATORY):
+  /ask codex "파일 내용 + 구체적 수정 지시"
+  → 수정 대상 심볼의 전체 코드 + 참조 타입/인터페이스 시그니처 + 관련 import 포함
+    (토큰 제한 고려 — 전체 파일 대신 관련 섹션 허용)
+  → 파일명 + 수정할 함수/클래스 수준의 구체적 지시
+  → flutter analyze 실행 요청 (Codex quick scan)
   → Async Guardrail 준수 (CCB_ASYNC_SUBMITTED → 턴 종료)
+  → round_id/team_id 마커 포함 (예: [HIVE IMPLEMENTATION — T2 — W1])
 
 Gemini 에이전트:
-  Bash("CCB_CALLER=claude ask gemini \"$PROMPT\"")
+  /ask gemini "$PROMPT"
   → 동일 CCB 패턴
 ```
 
-### 5-3. 결과 수집
+**실행 순서**: Claude Agent tool 호출을 먼저 실행 (병렬 스폰), 이후 CCB /ask 호출.
+CCB async guardrail로 인해 /ask 후 턴 종료되므로, Claude 에이전트를 먼저 스폰해야 한다.
+Codex는 사후 리뷰가 아닌 **병렬 구현자**로 참여한다.
+
+**flutter analyze 하이브리드**: Codex가 quick scan 실행, 리드가 모든 Wave 완료 후
+`flutter analyze --fatal-infos`로 deep scan 실행 (최종 Quality Gate).
+
+### 5-3. 결과 수집 및 양방향 피드백 (MANDATORY)
 
 ```
-Claude 에이전트 → SendMessage 자동 수신 (idle notification)
-CCB 에이전트 → pend로 수집, CCB_DONE marker 확인
+Claude 에이전트:
+  1. SendMessage 자동 수신 (idle notification)
+  2. 에이전트 중간 보고/질문 → 리드가 반드시 SendMessage로 응답
+     - 문제 없음 → "확인했습니다. 계속 진행하세요"
+     - 방향 조정 → 구체적 수정 지시
+     - CONSENSUS 위반 → 관련 항목 인용 + 올바른 방향 제시
+  3. 에이전트 완료 보고 → CONSENSUS 대비 검증 후 피드백
+
+CCB 에이전트:
+  pend로 수집 → CCB_DONE marker 확인
+  COUNTER/CLARIFY 마커 발견 시 → /ask로 재응답 (무시 금지)
 
 Wave 완료 조건: 해당 Wave 모든 팀 completed → 다음 Wave 실행
 ```
+
+❌ 금지: 에이전트 응답 무시하고 결과만 수집
+❌ 금지: SendMessage 없이 shutdown_request 전송
 
 ### 5-4. 실패 처리
 
