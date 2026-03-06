@@ -6,7 +6,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, Agent, Team
 
 # /hive - Multi-Orchestration Team Builder
 
-> **Version**: 1.4.0
+> **Version**: 1.5.0
 > **참조 스킬**: `hive-workflow`, `hive-consensus`, `hive-spawn-templates`
 
 $ARGUMENTS
