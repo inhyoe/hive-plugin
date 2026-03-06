@@ -1,11 +1,11 @@
 {
   "name": "hive",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Multi-provider AI team orchestration (Claude/Codex/Gemini) with structured consensus protocol. Brainstorm, analyze codebase, decompose into teams, reach consensus, then execute in parallel waves.",
   "author": {
-    "name": "ryu-ubuntu"
+    "name": "inhyoe"
   },
-  "repository": "https://github.com/ryu-ubuntu/hive-plugin",
+  "repository": "https://github.com/inhyoe/hive-plugin",
   "license": "MIT",
   "keywords": ["orchestration", "multi-agent", "consensus", "team-builder", "multi-provider"]
 }
