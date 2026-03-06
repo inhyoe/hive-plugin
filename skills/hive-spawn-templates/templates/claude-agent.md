@@ -95,11 +95,13 @@
 
 ```
 Agent(
+  description="{{TEAM_ID}} {{MODULE_NAME}} 담당",
+  prompt="<위 프롬프트 — {{VAR}} 치환 완료 후 전달>",
   subagent_type="general-purpose",
-  name="{{AGENT_NAME}}",
-  team_name="{{TEAM_NAME}}",
-  model="{{MODEL}}",
-  prompt="<위 프롬프트>",
   isolation="worktree"
 )
 ```
+
+> **Note**: Agent tool은 `description`, `prompt`, `subagent_type`, `isolation`, `resume`, `run_in_background`만 지원합니다.
+> `name`, `team_name`, `model` 등은 공식 파라미터가 아닙니다.
+> 팀/에이전트 식별 정보는 prompt 내부에 포함하세요.

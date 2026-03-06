@@ -4,7 +4,7 @@
 
 ```
 CCB_CALLER=claude ask gemini "
-[HIVE CONSENSUS REQUEST — {{TEAM_ID}} — R{{ROUND_NUM}}]
+[TASK PROPOSAL — {{TEAM_ID}} — R{{ROUND_NUM}}]
 
 당신은 {{MODULE_NAME}} 모듈의 담당 에이전트입니다.
 

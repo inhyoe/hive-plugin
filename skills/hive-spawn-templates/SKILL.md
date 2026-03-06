@@ -1,6 +1,6 @@
 ---
 name: hive-spawn-templates
-description: /hive Phase 4-5에서 에이전트 스폰 시 사용하는 프로바이더별 프롬프트 템플릿.
+description: Provider-specific prompt templates for spawning agents in /hive Phase 4-5. Contains Claude, Codex, and Gemini templates with variable placeholders. Loaded when /hive spawns agents for consensus or implementation.
 user-invocable: false
 ---
 
@@ -21,6 +21,10 @@ user-invocable: false
 ---
 
 ## 1. 변수 정의
+
+> **Note**: 아래 `{{VAR}}` 변수들은 Claude Code 공식 변수(`$ARGUMENTS`, `${CLAUDE_SKILL_DIR}` 등)가 아닌
+> **리드(오케스트레이터)가 런타임에 직접 치환**하는 커스텀 플레이스홀더입니다.
+> 리드는 Phase 1-4에서 수집한 데이터로 각 변수를 실제 값으로 대체한 뒤 에이전트에게 전송합니다.
 
 ### 정적 변수
 

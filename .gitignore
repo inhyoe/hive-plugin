@@ -1,0 +1,9 @@
+# CCB session files
+.ccb/
+
+# Claude local config/memory
+.claude/
+
+# Python cache
+__pycache__/
+*.pyc

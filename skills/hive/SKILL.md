@@ -1,6 +1,7 @@
 ---
 name: hive
-description: Brainstorm → Serena Context → Team Decomposition → Consensus → Execute. 멀티 프로바이더(Claude/Codex/Gemini) 오케스트레이션 팀 빌더.
+description: Orchestrates multi-provider AI teams (Claude/Codex/Gemini) through Brainstorm, Serena Context, Team Decomposition, Consensus, and Execute phases. Use when decomposing large tasks across multiple AI agents, coordinating multi-agent implementation, or when the user requests team-based orchestration.
+argument-hint: "[task-description]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, Agent, TeamCreate, TeamDelete, TaskCreate, TaskUpdate, TaskList, TaskGet, SendMessage, mcp__serena-shared__list_dir, mcp__serena-shared__search_for_pattern, mcp__serena-shared__get_symbols_overview, mcp__serena-shared__find_symbol, mcp__serena-shared__find_referencing_symbols, mcp__serena-shared__read_memory, mcp__serena-shared__list_memories
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: hive-consensus
-description: /hive Phase 4 합의 프로토콜. 각 에이전트가 담당 모듈에 대해 리드와 양방향 합의. CONSENSUS 도달 전 구현 착수 금지.
+description: Bidirectional consensus protocol for /hive Phase 4. Manages AGREE/COUNTER/CLARIFY loops between lead and agents per module. Loaded when /hive enters the consensus phase.
 user-invocable: false
 ---
 

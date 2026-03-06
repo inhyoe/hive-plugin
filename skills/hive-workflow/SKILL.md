@@ -1,6 +1,6 @@
 ---
 name: hive-workflow
-description: /hive 스킬의 Phase 1-5 핵심 엔진. Brainstorm → Serena Context → Team Decomposition → Execute.
+description: Core workflow engine for the /hive skill covering Phase 1-3 and 5 (Brainstorm, Serena Context, Team Decomposition, Execute). Phase 4 Consensus is in hive-consensus. Loaded automatically when /hive is invoked.
 user-invocable: false
 ---
 
@@ -333,9 +333,9 @@ Phase 3의 의존성 그래프 (topological sort) 기반:
   Codex → 아키텍처 사전 리뷰 (결과를 에이전트 지침에 반영)
 
 Claude 에이전트:
-  Agent tool (subagent_type="general-purpose")
-  → team_name 지정, isolation="worktree"
-  → CONSENSUS 문서 + Serena 컨텍스트를 프롬프트에 포함
+  Agent tool (subagent_type="general-purpose", isolation="worktree")
+  → description + prompt에 팀/모듈 식별 정보 포함
+  → CONSENSUS 문서 + Serena 컨텍스트를 prompt에 포함
 
 Codex 에이전트 (직접 구현 — MANDATORY):
   /ask codex "파일 내용 + 구체적 수정 지시"

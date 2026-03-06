@@ -117,6 +117,7 @@ else
   fail "skills/ directory not found"
 fi
 
+# commands/ is legacy (migrated to skills/) — skip if absent
 if [[ -d "$REPO_ROOT/commands" ]]; then
   cmd_files=("$REPO_ROOT/commands"/*.md)
   if [[ -e "${cmd_files[0]}" ]]; then
@@ -124,10 +125,10 @@ if [[ -d "$REPO_ROOT/commands" ]]; then
       pass "commands/$(basename "$f") exists"
     done
   else
-    fail "commands/ directory has no .md files"
+    echo "  (commands/ directory is empty — skipped)"
   fi
 else
-  fail "commands/ directory not found"
+  pass "commands/ directory absent (migrated to skills/) — OK"
 fi
 
 # ============================================================
@@ -163,7 +164,7 @@ for skill_dir in "${SKILL_DIRS[@]}"; do
     fail "skills/$dir_name/SKILL.md: 'description' field missing"
   fi
 
-  # Check user-invocable field
+  # Check user-invocable field (optional per spec — defaults to true if absent)
   if has_frontmatter_field "$skill_file" "user-invocable"; then
     ui_val="$(get_frontmatter_field "$skill_file" "user-invocable")"
     if [[ -n "$ui_val" ]]; then
@@ -172,7 +173,7 @@ for skill_dir in "${SKILL_DIRS[@]}"; do
       fail "skills/$dir_name/SKILL.md: 'user-invocable' field is empty"
     fi
   else
-    fail "skills/$dir_name/SKILL.md: 'user-invocable' field missing"
+    pass "skills/$dir_name/SKILL.md: 'user-invocable' field absent (defaults to true per spec)"
   fi
 done
 
@@ -341,12 +342,16 @@ for skill_dir in "${SKILL_DIRS[@]}"; do
     fail "skills/$dir_name/SKILL.md: name='$name_val' does not match directory name '$dir_name'"
   fi
 
-  # Check user-invocable is boolean
-  ui_val="$(get_frontmatter_field "$skill_file" "user-invocable")"
-  if [[ "$ui_val" == "true" || "$ui_val" == "false" ]]; then
-    pass "skills/$dir_name/SKILL.md: user-invocable='$ui_val' is valid boolean"
+  # Check user-invocable is boolean (or absent = defaults to true)
+  if has_frontmatter_field "$skill_file" "user-invocable"; then
+    ui_val="$(get_frontmatter_field "$skill_file" "user-invocable")"
+    if [[ "$ui_val" == "true" || "$ui_val" == "false" ]]; then
+      pass "skills/$dir_name/SKILL.md: user-invocable='$ui_val' is valid boolean"
+    else
+      fail "skills/$dir_name/SKILL.md: user-invocable='$ui_val' is not a boolean (expected true/false)"
+    fi
   else
-    fail "skills/$dir_name/SKILL.md: user-invocable='$ui_val' is not a boolean (expected true/false)"
+    pass "skills/$dir_name/SKILL.md: user-invocable absent (defaults to true per spec)"
   fi
 done
 

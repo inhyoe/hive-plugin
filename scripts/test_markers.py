@@ -14,7 +14,7 @@ TARGET_FILES = [
     "skills/hive-spawn-templates/templates/claude-agent.md",
     "skills/hive-spawn-templates/templates/codex-agent.md",
     "skills/hive-spawn-templates/templates/gemini-agent.md",
-    "commands/hive.md",
+    "skills/hive/SKILL.md",
 ]
 
 # Single source of truth from hive-consensus §4.
