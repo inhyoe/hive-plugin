@@ -246,6 +246,14 @@ Step C: 의존성 → 실행 순서 (topological sort)
   Claude → 핵심 2-3개
   Codex → 최소 1개 직접 구현
   Gemini → 리서치 (필요 시)
+
+소규모 작업 (1-2 모듈) — exception:
+  비율 비적용 (물리적으로 % 분배 불가)
+  Claude 단독 구현 허용
+  단, Codex/Gemini에게 최소 1회 아래 유형 중 하나를 위임 필수:
+    - 사전 리뷰: 구현 전 설계/접근방식 검토 (예: /ask codex "[REVIEW] 아래 설계 검토해줘: ...")
+    - 사후 검증: 구현 후 코드 변경 검증 (예: /ask codex "[VERIFY] 아래 변경 검토해줘: ...")
+    - 테스트 작성: 구현된 코드에 대한 테스트 생성 (예: /ask gemini "[TEST] 아래 코드의 테스트 작성해줘: ...")
 ```
 
 ❌ 금지 패턴:
@@ -256,7 +264,7 @@ Step C: 의존성 → 실행 순서 (topological sort)
 #### Codex에게 구현 위임하는 방법
 
 ```
-/ask codex "[HIVE IMPLEMENTATION — {{TEAM_ID}}]
+/ask codex "[HIVE IMPLEMENTATION — {{TEAM_ID}} — W{{WAVE_NUM}}]
 
 {{MODULE_NAME}} 모듈의 아래 파일들을 수정해줘:
 
