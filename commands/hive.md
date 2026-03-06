@@ -1,12 +1,13 @@
 ---
+name: hive
 description: Brainstorm → Serena Context → Team Decomposition → Consensus → Execute. 멀티 프로바이더(Claude/Codex/Gemini) 오케스트레이션 팀 빌더.
-allowedTools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, Agent, TeamCreate, TeamDelete, TaskCreate, TaskUpdate, TaskList, TaskGet, SendMessage, mcp__serena-shared__list_dir, mcp__serena-shared__search_for_pattern, mcp__serena-shared__get_symbols_overview, mcp__serena-shared__find_symbol, mcp__serena-shared__find_referencing_symbols, mcp__serena-shared__read_memory, mcp__serena-shared__list_memories
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, Agent, TeamCreate, TeamDelete, TaskCreate, TaskUpdate, TaskList, TaskGet, SendMessage, mcp__serena-shared__list_dir, mcp__serena-shared__search_for_pattern, mcp__serena-shared__get_symbols_overview, mcp__serena-shared__find_symbol, mcp__serena-shared__find_referencing_symbols, mcp__serena-shared__read_memory, mcp__serena-shared__list_memories
 ---
 
 # /hive - Multi-Orchestration Team Builder
 
 > **Version**: 1.4.0
-> **참조 스킬**: `hive-workflow.md`, `hive-consensus.md`, `hive-spawn-templates.md`
+> **참조 스킬**: `hive-workflow`, `hive-consensus`, `hive-spawn-templates`
 
 $ARGUMENTS
 

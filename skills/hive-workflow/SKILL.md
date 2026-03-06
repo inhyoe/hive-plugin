@@ -1,6 +1,7 @@
 ---
 name: hive-workflow
 description: /hive 스킬의 Phase 1-5 핵심 엔진. Brainstorm → Serena Context → Team Decomposition → Execute.
+user-invocable: false
 ---
 
 # Hive Workflow Engine
@@ -104,7 +105,7 @@ Options:
 1. 2-3가지 접근방식 제안
 2. 각각의 **트레이드오프** 명시 (장점/단점)
 3. **추천안** 표시 + 이유
-4. ⛔ AskUserQuestion: 접근방식 선택
+4. AskUserQuestion: 접근방식 선택
 
 ### 1-4. 요구사항 확정 문서 (in-memory)
 
@@ -183,7 +184,7 @@ Step F: 영향 범위 맵 생성 (in-memory)
 | 상황 | 동작 |
 |------|------|
 | 영향 모듈 5개 이하 | 자동으로 Phase 3 진입 |
-| 영향 모듈 6개 이상 | ⛔ AskUserQuestion: "이 모듈들이 맞나요?" |
+| 영향 모듈 6개 이상 | AskUserQuestion: "이 모듈들이 맞나요?" |
 | Serena에서 심볼 못 찾음 | 사용자에게 힌트 요청 후 재검색 |
 
 원칙:
@@ -256,38 +257,6 @@ Step C: 의존성 → 실행 순서 (topological sort)
     - 테스트 작성: 구현된 코드에 대한 테스트 생성 (예: /ask gemini "[TEST] 아래 코드의 테스트 작성해줘: ...")
 ```
 
-❌ 금지 패턴:
-- Claude 에이전트 10개 독점 → Codex/Gemini 사후 첨가
-- Codex를 리뷰어로만 사용 (구현 능력 낭비)
-- Gemini 리서치 결과를 메모리에만 저장하고 실제 미적용
-
-#### Codex에게 구현 위임하는 방법
-
-```
-/ask codex "[HIVE IMPLEMENTATION — {{TEAM_ID}} — W{{WAVE_NUM}}]
-
-{{MODULE_NAME}} 모듈의 아래 파일들을 수정해줘:
-
-## 수정 대상
-1. {{FILE_PATH_1}} — {{구체적 수정 내용}}
-2. {{FILE_PATH_2}} — {{구체적 수정 내용}}
-
-## 파일 내용
-\`\`\`dart
-{{실제 파일 내용 또는 git diff}}
-\`\`\`
-
-## 규칙
-- CONSENSUS 범위만 구현
-- 기존 코드 스타일 준수
-- 수정 후 flutter analyze 실행해서 결과 알려줘
-
-## 완료 보고
-- 변경 파일 목록
-- 핵심 변경 요약 (diff 형태)
-- CONSENSUS 일치 여부 자체 검증"
-```
-
 배치 규칙:
 1. 팀 리드 = 항상 Claude main (오케스트레이터)
 2. 각 팀에 최소 1 에이전트
@@ -302,7 +271,7 @@ Step C: 의존성 → 실행 순서 (topological sort)
 팀 구성안을 아래 형식으로 사용자에게 표시:
 
 ```markdown
-## 🐝 Hive Team Plan
+## Hive Team Plan
 
 ### 프로바이더 분배
 | Provider | 모듈 수 | 비율 | 역할 |
@@ -326,10 +295,10 @@ T2 blocked_by: [T1]
 
 **필수 검증**: 대규모(6+)에서 Codex 직접 구현 모듈 최소 2개, 중소(3-5)에서 최소 1개 포함 확인.
 
-### 3-4. 사용자 확인 (⛔ 필수)
+### 3-4. 사용자 확인 (필수)
 
 ```
-⛔ AskUserQuestion:
+AskUserQuestion:
   "위 팀 구성안을 확인해주세요."
   Options:
     A. "승인 — 이대로 진행"
@@ -356,7 +325,7 @@ Phase 3의 의존성 그래프 (topological sort) 기반:
 
 ### 5-2. 프로바이더별 실행
 
-스폰 방법은 `hive-spawn-templates.md` 참조.
+스폰 방법은 `hive-spawn-templates` 스킬 참조.
 
 ```
 사전 준비 (에이전트 스폰 전):
@@ -407,17 +376,14 @@ CCB 에이전트:
 Wave 완료 조건: 해당 Wave 모든 팀 completed → 다음 Wave 실행
 ```
 
-❌ 금지: 에이전트 응답 무시하고 결과만 수집
-❌ 금지: SendMessage 없이 shutdown_request 전송
-
 ### 5-4. 실패 처리
 
 | 상황 | 동작 |
 |------|------|
 | Claude 에이전트 실패 | 에러 확인 → 리드 재시도 또는 직접 처리 |
-| CCB 타임아웃 | soft 3min pend 확인 → hard 10min 에스컬레이션 (hive-consensus.md §4 참조) → 실패 시 ⛔ AskUserQuestion |
+| CCB 타임아웃 | soft 3min pend 확인 → hard 10min 에스컬레이션 (hive-consensus §4 참조) → 실패 시 AskUserQuestion |
 | 구현이 CONSENSUS와 불일치 | 리드 diff 검토 → 재지시 또는 직접 수정 |
-| Wave 중 하나 실패 | 해당 Wave 중단 → 의존 Wave 대기 → ⛔ AskUserQuestion |
+| Wave 중 하나 실패 | 해당 Wave 중단 → 의존 Wave 대기 → AskUserQuestion |
 
 ### 5-5. 팀 셧다운
 
@@ -432,12 +398,12 @@ Wave 완료 조건: 해당 Wave 모든 팀 completed → 다음 Wave 실행
 ### 5-6. 최종 출력
 
 ```markdown
-## 🐝 Hive Execution Complete
+## Hive Execution Complete
 
 ### 결과 요약
 | 팀 | 상태 | 변경 파일 | 합의 라운드 |
 |----|------|----------|------------|
-| T1 | ✅/❌ | files... | N |
+| T1 | ... | files... | N |
 
 ### 총 변경: N files, +X / -Y lines
 ### 후속 작업: [기록]

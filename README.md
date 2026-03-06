@@ -35,8 +35,10 @@ Add the marketplace and install:
 Copy files to your Claude Code config:
 
 ```bash
-# Skills
-cp skills/hive-*.md ~/.claude/skills/hive/
+# Skills (directory structure)
+cp -r skills/hive-consensus ~/.claude/skills/
+cp -r skills/hive-workflow ~/.claude/skills/
+cp -r skills/hive-spawn-templates ~/.claude/skills/
 
 # Command
 cp commands/hive.md ~/.claude/commands/
