@@ -446,3 +446,29 @@ T3-UI: COUNTER received, negotiating... [2/3 completed]
 
 원칙: **Silent-by-Default** — 리드는 기술적 협상을 자율적으로 처리하고,
 사용자에게는 상태 변경과 결과만 보고 (Orchestration Fatigue 방지).
+
+---
+
+## 13. CROSS_FEEDBACK 프로토콜 (Phase 5 교차 피드백)
+
+Phase 5 실행 중 후속 Wave 에이전트가 선행 Wave 결과의 문제를 발견한 경우.
+
+### 13-1. 마커 형식
+
+```markdown
+[CROSS_FEEDBACK — {발견 팀 ID}→{대상 팀 ID} — {wave_id}]
+- 문제 유형: bug | performance | security | consensus_violation
+- 상세: {구체적 설명}
+- 영향 파일: {파일 목록}
+- 재현: {테스트 코드 또는 재현 단계}
+```
+
+### 13-2. 리드 의무
+
+| 문제 심각도 | 리드 대응 |
+|------------|----------|
+| 경미 (스타일, 네이밍) | 리드 직접 수정 또는 무시 |
+| 중대 (로직 버그, 테스트 실패) | 대상 팀에 수정 요청 → 발견 팀이 재검증 |
+| 치명 (설계 결함, 보안) | Phase 4 해당 팀 재합의 (§10-1 무효화 적용) |
+
+수정 요청 시 correlation key: `[FIX_REQUEST — {대상 팀 ID} — {wave_id} — ref:{CROSS_FEEDBACK message_id}]`
