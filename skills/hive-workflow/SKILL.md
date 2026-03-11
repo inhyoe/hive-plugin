@@ -436,7 +436,7 @@ Wave 완료 조건: 해당 Wave 모든 팀 completed → 다음 Wave 실행
 Wave N+1 에이전트가 Wave N 결과에서 문제 발견 시:
 
 ```
-[CROSS_FEEDBACK — {발견 팀}→{대상 팀} — {wave_id}]
+[CROSS FEEDBACK — {발견 팀}→{대상 팀} — {wave_id}]
 리드 판단:
   A. 경미 → 리드 직접 수정
   B. 중대 → 대상 팀에 수정 요청 → 발견 팀 재검증
@@ -484,8 +484,7 @@ Options: A. 리드가 직접 처리 B. 해당 팀 제외 C. 전체 중단
 모든 Wave 완료 후:
   1. Claude 에이전트: SendMessage(type="shutdown_request")
   2. CCB 세션: idle_timeout 자동 종료
-  3. 최종 결과 요약 출력
-  4. TeamDelete
+  3. 최종 결과 요약 출력 → TeamDelete
 ```
 
 ### 5-6. 최종 출력
