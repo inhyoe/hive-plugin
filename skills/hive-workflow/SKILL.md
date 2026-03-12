@@ -21,12 +21,10 @@ user-invocable: false
 Step A: MCP improve_prompt 호출
   mcp__plugin_prompts_chat_prompts_chat__improve_prompt(prompt=$ARGUMENTS)
   → 구조화된 프롬프트 반환
-
 Step B: MCP search_prompts로 유사 프롬프트 탐색 (보완)
   요청에서 핵심 키워드 추출 (예: "UI 수정", "Stitch", "이력 화면")
   mcp__plugin_prompts_chat_prompts_chat__search_prompts(query=키워드, limit=3)
   → 유사 프롬프트가 있으면 참조 패턴으로 활용
-
 Step C: 엔지니어링 결과 정리
   engineered_prompt = {
     "original": $ARGUMENTS,
@@ -43,17 +41,14 @@ Step D: SKILL 매칭
   SessionStart에서 주입된 리소스 목록과 CLAUDE.md Skill Auto-Trigger 테이블을 기반으로:
   1. engineered_prompt.keywords를 각 트리거 시그널과 대조
   2. 매칭되는 스킬 목록 생성
-
   예시:
     키워드 "Stitch + UI + 화면" → stitch-flutter, flutter-widget-decomposition
     키워드 "새 기능 + 화면 생성" → flutter-feature-scaffold, riverpod-patterns
     키워드 "버그 수정" → superpowers:systematic-debugging, flutter-error-handling
-
 Step E: MCP search_skills로 추가 스킬 탐색
   mcp__plugin_prompts_chat_prompts_chat__search_skills(query=핵심 키워드, limit=5)
   → prompts.chat 레지스트리에서 설치 가능한 외부 스킬 확인
   → 이미 로컬에 있는 스킬과 중복 제거
-
 Step F: PLUGIN/AGENT 매칭
   engineered_prompt.keywords 기반으로:
   - voltagent 서브에이전트 중 적합한 것 식별 (qa-sec, core-dev, biz)
@@ -71,7 +66,6 @@ resource_map = {
   "mcp_tools": ["improve_prompt", "search_skills", ...],
   "execution_recommendation": "SUB_AGENT" | "CLAUDE_TEAM" | "SOLO"
 }
-
 실행 방식 판단 기준:
   - 모듈 1-2개 + 스킬 매칭 충분 → SOLO (Claude 단독 + 스킬)
   - 모듈 3-5개 + 독립 작업 가능 → SUB_AGENT (병렬 서브에이전트)
@@ -82,21 +76,17 @@ resource_map = {
 
 ```
 Phase 0 결과를 아래 형식으로 표시:
-
 PROMPT ENGINEERING COMPLETE
 ============================
 원본: {$ARGUMENTS 요약}
 개선: {engineered_prompt.improved 요약}
-
 매칭된 리소스:
 - 스킬: {skills_local 목록}
 - 프로세스: {process_skills 목록}
 - 서브에이전트: {subagents 목록}
 - 외부 스킬: {skills_external 요약} (설치 필요)
-
 실행 방식 추천: {execution_recommendation}
   근거: {판단 근거 1줄}
-
 AskUserQuestion:
   "위 분석 결과를 확인해주세요."
   Options:
@@ -113,7 +103,6 @@ Phase 0 완료 시 Phase 1에 전달하는 데이터:
   - engineered_prompt (개선된 프롬프트 — Phase 1의 $ARGUMENTS를 대체)
   - resource_map (Phase 3 팀 구성 시 참조)
   - execution_recommendation (Phase 3 팀 분할 방식 사전 결정)
-
 Phase 1은 engineered_prompt를 기반으로 5차원 평가를 수행한다.
 resource_map의 process_skills는 Phase 5 실행 시 에이전트 프롬프트에 포함한다.
 ```
@@ -159,54 +148,13 @@ ELSE:
 
 #### 차원별 질문 은행
 
-**Problem Clarity (30%)**
-```
-"어떤 유형의 작업인가요?"
-Options:
-  A. "특정 버그/결함 수정" → 27pts
-  B. "새 기능 추가 (비즈니스 가치 정의됨)" → 27pts
-  C. "성능/최적화 개선" → 24pts
-  D. "리팩터링/코드 개선" → 18pts
-```
-
-**Functional Scope (25%)**
-```
-"기능 범위가 어느 정도인가요?"
-Options:
-  A. "단일 모듈/컴포넌트" → 23pts
-  B. "관련된 2-3개 모듈" → 20pts
-  C. "크로스커팅 시스템 변경" → 18pts
-  D. "잘 모르겠음 — 코드베이스 분석 필요" → 10pts
-```
-
-**Success Criteria (20%)**
-```
-"성공을 어떻게 검증할 건가요?"
-Options:
-  A. "자동화 테스트 (unit/integration/e2e)" → 18pts
-  B. "성능 벤치마크 (목표치 있음)" → 18pts
-  C. "수동 테스트 체크리스트" → 14pts
-  D. "아직 정의 안 됨" → 6pts
-```
-
-**Constraints (15%)**
-```
-"주요 제약사항이 있나요?"
-Options:
-  A. "하위 호환성 유지 필수" → 14pts
-  B. "특정 라이브러리/프레임워크 사용 제한" → 12pts
-  C. "성능 SLA 준수" → 12pts
-  D. "특별한 제약 없음" → 15pts
-```
-
-**Priority/MVP (10%)**
-```
-"우선순위를 어떻게 나누시겠어요?"
-Options:
-  A. "전부 한 번에 구현" → 8pts
-  B. "핵심 기능 먼저 → 부가 기능 나중에" → 10pts
-  C. "MVP로 검증 → 점진적 확장" → 10pts
-```
+| 차원 | 질문 | Options (점수) |
+|------|------|---------------|
+| Problem Clarity (30%) | "어떤 유형의 작업인가요?" | A. 버그 수정(27) B. 새 기능(27) C. 성능 개선(24) D. 리팩터링(18) |
+| Functional Scope (25%) | "기능 범위가 어느 정도인가요?" | A. 단일 모듈(23) B. 2-3개 모듈(20) C. 크로스커팅(18) D. 분석 필요(10) |
+| Success Criteria (20%) | "성공을 어떻게 검증할 건가요?" | A. 자동화 테스트(18) B. 성능 벤치마크(18) C. 수동 체크리스트(14) D. 미정의(6) |
+| Constraints (15%) | "주요 제약사항이 있나요?" | A. 하위호환 필수(14) B. 라이브러리 제한(12) C. 성능 SLA(12) D. 없음(15) |
+| Priority/MVP (10%) | "우선순위를 어떻게 나누시겠어요?" | A. 전부 한번에(8) B. 핵심 먼저(10) C. MVP 검증(10) |
 
 ### 1-3. 접근방식 제안
 
@@ -300,6 +248,7 @@ Step F: 영향 범위 맵 생성 (in-memory)
 - **최소 토큰**: `include_body=false`로 시작, 필요한 심볼만 `include_body=true`
 - **Serena 우선**: Read로 전체 파일 읽기 대신 심볼 단위 탐색
 - **영향 범위 맵이 Phase 3의 입력**
+- **컨텍스트 예산**: 리드=요구사항+아키텍처, Claude=심볼+의존성, Codex=코드+타입만, Gemini=요약+패턴 (hive-spawn-templates §2)
 
 ---
 
@@ -440,12 +389,10 @@ Phase 3의 의존성 그래프 (topological sort) 기반:
 사전 준비 (에이전트 스폰 전):
   Gemini → 리서치/체크리스트 확보 (결과를 에이전트 프롬프트에 "기준"으로 직접 포함)
   Codex → 아키텍처 사전 리뷰 (결과를 에이전트 지침에 반영)
-
 Claude 에이전트:
   Agent tool (subagent_type="general-purpose")
   → team_name 지정, isolation="worktree"
   → CONSENSUS 문서 + Serena 컨텍스트를 프롬프트에 포함
-
 Codex 에이전트 (직접 구현 — MANDATORY):
   /ask codex "파일 내용 + 구체적 수정 지시"
   → 수정 대상 심볼의 전체 코드 + 참조 타입/인터페이스 시그니처 + 관련 import 포함
@@ -454,7 +401,6 @@ Codex 에이전트 (직접 구현 — MANDATORY):
   → flutter analyze 실행 요청 (Codex quick scan)
   → Async Guardrail 준수 (CCB_ASYNC_SUBMITTED → 턴 종료)
   → round_id/team_id 마커 포함 (예: [HIVE IMPLEMENTATION — T2 — W1])
-
 Gemini 에이전트:
   /ask gemini "$PROMPT"
   → 동일 CCB 패턴
@@ -485,14 +431,52 @@ CCB 에이전트:
 Wave 완료 조건: 해당 Wave 모든 팀 completed → 다음 Wave 실행
 ```
 
-### 5-4. 실패 처리
+### 5-3a. 교차 에이전트 피드백 (Cross-Agent Feedback)
 
-| 상황 | 동작 |
-|------|------|
-| Claude 에이전트 실패 | 에러 확인 → 리드 재시도 또는 직접 처리 |
-| CCB 타임아웃 | soft 3min pend 확인 → hard 10min 에스컬레이션 (hive-consensus §4 참조) → 실패 시 AskUserQuestion |
-| 구현이 CONSENSUS와 불일치 | 리드 diff 검토 → 재지시 또는 직접 수정 |
-| Wave 중 하나 실패 | 해당 Wave 중단 → 의존 Wave 대기 → AskUserQuestion |
+Wave N+1 에이전트가 Wave N 결과에서 문제 발견 시:
+
+```
+[CROSS FEEDBACK — {발견 팀}→{대상 팀} — {wave_id}]
+리드 판단:
+  A. 경미 → 리드 직접 수정
+  B. 중대 → 대상 팀에 수정 요청 → 발견 팀 재검증
+  C. 설계 결함 → Phase 4 해당 팀 재합의 (§10-1 적용)
+```
+
+교차 피드백은 **Wave 간에만** 발생. 리드는 수신 시 반드시 판단 + 조치 (무시 금지).
+상세 마커 형식: hive-consensus §13 참조.
+
+### 5-4. Failure Analysis (실패 분석 — Ralph Loop V2)
+
+Phase 5 실패 시 **동일 프롬프트 재시도 금지**. 원인 분류 후 맞춤 재진입.
+
+#### 실패 원인 분류
+
+| 분류 | 진단 기준 | 리드 대응 | 재진입 지점 |
+|------|----------|----------|------------|
+| 컨텍스트 부족 | 에이전트가 잘못된 파일/심볼 참조 | 파일 목록 재선정 | Phase 5 재시도 (CONSENSUS 유지) |
+| 잘못된 방향 | 구현이 CONSENSUS와 불일치 | CONSENSUS 부분 무효화 + 재합의 | Phase 4 재진입 (해당 팀만) |
+| 요구사항 오해 | 결과가 사용자 의도와 불일치 | 요구사항 재명확화 | Phase 1 재진입 (§10-1 전체 무효화) |
+| 기술적 장벽 | API 미지원, 라이브러리 한계 | 대안 접근 탐색 + 팀 재구성 | Phase 3 재진입 (해당 팀 무효화) |
+| CCB 타임아웃 | soft 3min 미응답 → hard 10min | pend 재확인 → LEAD DECISION | Phase 4 (hive-consensus §4) |
+
+#### 분석 프로세스
+
+```
+Phase 5 실패 감지
+  → Step 1: 원인 분류 (위 표 기준)
+  → Step 2: 프롬프트 재작성
+    - 컨텍스트 부족 → 파일 선택 재실행 (hive-spawn-templates §3)
+    - 잘못된 방향 → CONSENSUS 변경점을 새 프롬프트에 명시
+    - 요구사항 오해 → AskUserQuestion으로 사용자 재확인
+  → Step 3: 패턴 기록 (auto-memory)
+    성공 패턴: "이 프롬프트 구조가 {작업유형}에 효과적"
+    실패 패턴: "Codex에게 {X}는 타입 정의 사전 제공 필수"
+  → Step 4: 재진입 (무효화 매트릭스 §10-1 참조)
+```
+
+동일 팀 최대 3회 재시도. 3회 실패 시 AskUserQuestion:
+Options: A. 리드가 직접 처리 B. 해당 팀 제외 C. 전체 중단
 
 ### 5-5. 팀 셧다운
 
@@ -500,20 +484,16 @@ Wave 완료 조건: 해당 Wave 모든 팀 completed → 다음 Wave 실행
 모든 Wave 완료 후:
   1. Claude 에이전트: SendMessage(type="shutdown_request")
   2. CCB 세션: idle_timeout 자동 종료
-  3. 최종 결과 요약 출력
-  4. TeamDelete
+  3. 최종 결과 요약 출력 → TeamDelete
 ```
 
 ### 5-6. 최종 출력
 
 ```markdown
 ## Hive Execution Complete
-
 ### 결과 요약
 | 팀 | 상태 | 변경 파일 | 합의 라운드 |
 |----|------|----------|------------|
 | T1 | ... | files... | N |
-
-### 총 변경: N files, +X / -Y lines
-### 후속 작업: [기록]
+### 총 변경: N files, +X / -Y lines | 후속 작업: [기록]
 ```
