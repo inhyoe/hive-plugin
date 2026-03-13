@@ -15,6 +15,8 @@ TARGET_FILES = [
     "skills/hive-spawn-templates/templates/codex-agent.md",
     "skills/hive-spawn-templates/templates/gemini-agent.md",
     "skills/hive/SKILL.md",
+    "skills/hive-quality-gates/SKILL.md",
+    "skills/hive-tdd-pipeline/SKILL.md",
 ]
 
 # Single source of truth from hive-consensus §4.
@@ -67,10 +69,66 @@ MARKER_PATTERNS = {
         "template": re.compile(rf"^\[CLARIFY — {PLACEHOLDER}\]\s*$"),
         "instance": re.compile(r"^\[CLARIFY — T\d+\]\s*$"),
     },
+    "CLARIFY PASSED": {
+        "template": re.compile(
+            r"^\[CLARIFY PASSED — scope:\{[^}]+\} criteria:\{[^}]+\} constraints:\{[^}]+\}\]"
+        ),
+        "instance": re.compile(
+            r"^\[CLARIFY PASSED — scope:.+ criteria:.+ constraints:.+\]"
+        ),
+    },
+    "SPEC APPROVED": {
+        "template": re.compile(r"^\[SPEC APPROVED — hash:\{[^}]+\}\]"),
+        "instance": re.compile(r"^\[SPEC APPROVED — hash:[a-f0-9]{64}\]"),
+    },
+    "PLAN DEBATE": {
+        "template": re.compile(
+            r"^\[PLAN DEBATE — (?:R\{[^}]+\} — )?(Designer→Reviewer|Reviewer→Designer|CONSENSUS|TIEBREAK)"
+        ),
+        "instance": re.compile(
+            r"^\[PLAN DEBATE — (?:R\d+ — )?(Designer→Reviewer|Reviewer→Designer|CONSENSUS|TIEBREAK)"
+        ),
+    },
+    "TDD RED PASSED": {
+        "template": re.compile(
+            r"^\[TDD RED PASSED — test_count:\{[^}]+\} fail_count:\{[^}]+\}\]"
+        ),
+        "instance": re.compile(
+            r"^\[TDD RED PASSED — test_count:\d+ fail_count:\d+\]"
+        ),
+    },
+    "IMPLEMENT GREEN PASSED": {
+        "template": re.compile(
+            r"^\[IMPLEMENT GREEN PASSED — pass:\{[^}]+\}/\{[^}]+\} iterations:\{[^}]+\}\]"
+        ),
+        "instance": re.compile(
+            r"^\[IMPLEMENT GREEN PASSED — pass:\d+/\d+ iterations:\d+\]"
+        ),
+    },
+    "CROSS-VERIFY PASSED": {
+        "template": re.compile(
+            r"^\[CROSS-VERIFY PASSED — mutation:\{[^}]+\}% pbt:\{[^}]+\} review:\{[^}]+\}\]"
+        ),
+        "instance": re.compile(
+            r"^\[CROSS-VERIFY PASSED — mutation:\d+% pbt:(pass|fail) review:(PASS|CONCERN|REJECT)\]"
+        ),
+    },
+    "E2E VALIDATE PASSED": {
+        "template": re.compile(
+            r"^\[E2E VALIDATE PASSED — type:\{[^}]+\} result:\{[^}]+\}\]"
+        ),
+        "instance": re.compile(
+            r"^\[E2E VALIDATE PASSED — type:(A|B|C) result:.+\]"
+        ),
+    },
 }
 
 MARKER_START_RE = re.compile(
-    r"^\[(TASK PROPOSAL|FOLLOW-UP|HIVE IMPLEMENTATION|AGREE|COUNTER|CLARIFY)(?:\s+—|\])"
+    r"^\[(TASK PROPOSAL|FOLLOW-UP|HIVE IMPLEMENTATION|AGREE|COUNTER"
+    r"|CLARIFY PASSED|CLARIFY"
+    r"|SPEC APPROVED|PLAN DEBATE"
+    r"|TDD RED PASSED|IMPLEMENT GREEN PASSED"
+    r"|CROSS-VERIFY PASSED|E2E VALIDATE PASSED)(?:\s+—|\])"
 )
 
 
@@ -113,9 +171,22 @@ def scan_file(repo_root: Path, rel_path: str, counter: Counter) -> None:
         print(f"[FAIL] {rel_path} — file not found")
         return
 
+    in_hard_gate = False
+
     with path.open("r", encoding="utf-8") as f:
         for lineno, raw_line in enumerate(f, start=1):
             stripped = raw_line.strip()
+
+            # Skip lines inside <hard_gate> blocks — these contain
+            # marker references in prose, not actual marker emissions.
+            if stripped.startswith("<hard_gate"):
+                in_hard_gate = True
+                continue
+            if stripped.startswith("</hard_gate>"):
+                in_hard_gate = False
+                continue
+            if in_hard_gate:
+                continue
 
             # Markdown-aware filtering:
             # - only bracket-leading lines are considered marker candidates
