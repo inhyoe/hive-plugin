@@ -8,14 +8,14 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, Agent, Team
 # /hive - Multi-Orchestration Team Builder
 
 > **Version**: 2.0.0
-> **참조 스킬**: `hive-workflow`, `hive-consensus`, `hive-spawn-templates`
+> **참조 스킬**: `hive-workflow`, `hive-consensus`, `hive-spawn-templates`, `hive-quality-gates`, `hive-tdd-pipeline`
 
 $ARGUMENTS
 
 <mindset priority="HIGHEST">
 천천히, 최선을 다해 작업하세요.
 
-핵심 역할: **Prompt Engineering → Brainstorm → Serena → Team → Consensus → Execute**
+핵심 역할: **Clarify → Spec → Prompt Eng → Brainstorm → Serena → Team → Consensus(Debate) → TDD Red → Implement Green → Cross-Verify → E2E Validate**
 0. 사용자 요청을 MCP로 프롬프트 엔지니어링 + 리소스 자동 탐색
 1. 사용자 요구사항을 brainstorm으로 명확화
 2. Serena MCP로 코드베이스 컨텍스트 수집
@@ -126,6 +126,7 @@ Phase 실행 순서 (순차):
 
 ```
 Phase 0: Prompt Engineering & Resource Discovery (프롬프트 엔지니어링 + 리소스 탐색)
+  → ⛔ G1: CLARIFY + G2: SPEC 게이트 선행 필수 (참조: hive-quality-gates §2-3)
   → MCP improve_prompt → 리소스 매칭 → 관련 SKILL/PLUGIN 식별 → ⛔ 엔지니어링 결과 사용자 확인
   → 참조: hive-workflow § Phase 0
 
@@ -142,13 +143,15 @@ Phase 3: Team Decomposition (팀 분해)
   → 참조: hive-workflow § Phase 3
 
 Phase 4: Consensus Loop (합의) ⚠️ 양방향 대화 필수
+  → ⛔ G3: PLAN REVIEW 상호 토론 선행 필수 (참조: hive-quality-gates §4)
   → TeamCreate → 에이전트 스폰 (TASK PROPOSAL만)
   → 에이전트 응답 수신 → 리드 SendMessage 응답
   → AGREE/COUNTER/CLARIFY 루프 → CONSENSUS 도달
   → ❌ 합의+구현을 하나로 합치기 금지
   → 참조: hive-consensus
 
-Phase 5: Execute & Monitor (실행) ⚠️ 중간 체크 필수
+Phase 5: Execute & Monitor (실행) ⚠️ TDD Pipeline 필수
+  → G4-G7 TDD Pipeline 강제 (참조: hive-tdd-pipeline)
   → CONSENSUS 기반 구현 프롬프트 전송 (별도 스폰/메시지)
   → 에이전트 중간 보고 수신 → 리드 피드백
   → 결과 수집 → CONSENSUS 대비 검증 → 통합 → 셧다운
