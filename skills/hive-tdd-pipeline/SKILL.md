@@ -71,7 +71,7 @@ Non-negotiable.
 
 <hard_gate rule="G5_GREEN_BEFORE_VERIFY">
 Do NOT proceed to G6 (CROSS-VERIFY) unless the conversation contains
-[IMPLEMENT GREEN PASSED — pass:{N}/{N}]. Non-negotiable.
+[IMPLEMENT GREEN PASSED — pass:{N}/{N} iterations:{M}]. Non-negotiable.
 </hard_gate>
 
 구현자: Agent B (Codex 또는 별도 Claude 세션)
@@ -93,15 +93,23 @@ hash(현재테스트) ≠ hash(G4승인테스트) → [TEST TAMPERING DETECTED] 
 ```
 워커가 테스트 파일 수정 시 즉시 차단.
 
+구현 코드 해시 기록: `Bash("sha256sum <impl_files> | cut -d' ' -f1")`
+→ `.hive-state/g5-implement.marker`에 저장 (G6 진입 시 검증 대상)
+
 ---
 
 ## 4. G6: CROSS-VERIFY
 
 <hard_gate rule="G6_VERIFY_BEFORE_E2E">
 Do NOT proceed to G7 (E2E) unless the conversation contains
-[CROSS-VERIFY PASSED — mutation:{%} pbt:{pass} review:{verdict}]
-with mutation >= 60 and review != REJECT. Non-negotiable.
+[CROSS-VERIFY PASSED — mutation:{%} pbt:{pass/fail} review:{verdict}]
+with mutation >= 60 and pbt == pass and review != REJECT. Non-negotiable.
 </hard_gate>
+
+### 진입 검증: 구현 코드 해시
+```
+hash(현재구현) ≠ hash(G5승인구현) → [IMPLEMENTATION TAMPERED] → G5 회귀
+```
 
 ### 3중 검증 파이프라인
 
