@@ -6,6 +6,14 @@
 CCB_CALLER=claude ask codex "
 [TASK PROPOSAL — {{TEAM_ID}} — R{{ROUND_NUM}}]
 
+<AGENT_CAPABILITY_DIRECTIVE>
+You MUST utilize ALL available resources before and during your task:
+- Invoke all relevant skills available in your session
+- Use all connected MCP tools
+- If uncertain, use web search to verify before guessing
+Do NOT respond based on inference alone when tools are available.
+</AGENT_CAPABILITY_DIRECTIVE>
+
 당신은 {{MODULE_NAME}} 모듈의 담당 에이전트입니다.
 
 ## 요구사항
@@ -56,6 +64,14 @@ CCB_CALLER=claude ask codex "
 ```
 CCB_CALLER=claude ask codex "
 [HIVE IMPLEMENTATION — {{TEAM_ID}} — W{{WAVE_NUM}}]
+
+<AGENT_CAPABILITY_DIRECTIVE>
+You MUST utilize ALL available resources before and during your task:
+- Invoke all relevant skills available in your session
+- Use all connected MCP tools
+- If uncertain, use web search to verify before guessing
+Do NOT respond based on inference alone when tools are available.
+</AGENT_CAPABILITY_DIRECTIVE>
 
 당신은 {{MODULE_NAME}} 모듈의 구현을 담당합니다.
 

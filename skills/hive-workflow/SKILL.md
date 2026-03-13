@@ -13,6 +13,9 @@ user-invocable: false
 
 ## Phase 0: Prompt Engineering & Resource Discovery (프롬프트 엔지니어링 + 리소스 탐색)
 
+<hard_gate rule="QUALITY_GATES_G1_G2">
+Phase 0 진입 전 G1(CLARIFY)+G2(SPEC) 통과 필수. 참조: hive-quality-gates §2-3.
+</hard_gate>
 사용자의 원본 요청($ARGUMENTS)을 분석하여 프롬프트를 구체화하고, 작업에 필요한 리소스를 자동 식별합니다.
 
 ### 0-1. 프롬프트 엔지니어링 (MCP)
@@ -81,10 +84,7 @@ PROMPT ENGINEERING COMPLETE
 원본: {$ARGUMENTS 요약}
 개선: {engineered_prompt.improved 요약}
 매칭된 리소스:
-- 스킬: {skills_local 목록}
-- 프로세스: {process_skills 목록}
-- 서브에이전트: {subagents 목록}
-- 외부 스킬: {skills_external 요약} (설치 필요)
+- 리소스: 스킬:{skills_local} | 프로세스:{process_skills} | 서브에이전트:{subagents} | 외부:{skills_external}
 실행 방식 추천: {execution_recommendation}
   근거: {판단 근거 1줄}
 AskUserQuestion:
@@ -371,6 +371,9 @@ AskUserQuestion:
 
 ## Phase 5: Execute & Monitor
 
+<hard_gate rule="QUALITY_GATES_G4_G7">
+Phase 5 실행 시 G4-G7 TDD 게이트 강제. 참조: hive-tdd-pipeline §2-5.
+</hard_gate>
 ### 5-1. 실행 순서 (Wave 기반)
 
 ```
@@ -488,12 +491,9 @@ Options: A. 리드가 직접 처리 B. 해당 팀 제외 C. 전체 중단
 ```
 
 ### 5-6. 최종 출력
-
-```markdown
+```
 ## Hive Execution Complete
-### 결과 요약
 | 팀 | 상태 | 변경 파일 | 합의 라운드 |
-|----|------|----------|------------|
 | T1 | ... | files... | N |
-### 총 변경: N files, +X / -Y lines | 후속 작업: [기록]
+총 변경: N files, +X/-Y | 후속: [기록]
 ```

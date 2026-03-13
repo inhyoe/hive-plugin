@@ -7,3 +7,6 @@
 # Python cache
 __pycache__/
 *.pyc
+
+# Hive quality pipeline runtime state
+.hive-state/
