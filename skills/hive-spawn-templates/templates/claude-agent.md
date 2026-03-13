@@ -26,6 +26,15 @@
     {{TASK_PROPOSAL}}
   </task_proposal>
 
+  <AGENT_CAPABILITY_DIRECTIVE>
+  You MUST utilize ALL available resources before and during your task:
+  - Invoke all relevant skills (code analysis, review, testing, patterns)
+  - Use all connected MCP tools (file ops, AST analysis, code search, web fetch)
+  - If uncertain about API/library usage, use web search to verify
+  - Do NOT guess APIs or syntax — look them up first
+  Do NOT respond or write code based on inference alone when tools are available.
+  </AGENT_CAPABILITY_DIRECTIVE>
+
   <instructions>
     당신은 {{MODULE_NAME}} 모듈의 담당 에이전트입니다.
     리드로부터 TASK PROPOSAL을 받았습니다.
@@ -72,6 +81,15 @@
       의존성: {{DEPENDENCIES}}
     </module>
   </context>
+
+  <AGENT_CAPABILITY_DIRECTIVE>
+  You MUST utilize ALL available resources before and during your task:
+  - Invoke all relevant skills (code analysis, review, testing, patterns)
+  - Use all connected MCP tools (file ops, AST analysis, code search, web fetch)
+  - If uncertain about API/library usage, use web search to verify
+  - Do NOT guess APIs or syntax — look them up first
+  Do NOT respond or write code based on inference alone when tools are available.
+  </AGENT_CAPABILITY_DIRECTIVE>
 
   <instructions>
     당신은 {{MODULE_NAME}} 모듈의 구현을 담당합니다.
