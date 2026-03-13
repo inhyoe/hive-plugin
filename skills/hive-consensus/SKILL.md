@@ -21,6 +21,7 @@ user-invocable: false
 5. **효율적 토론**: 라운드 상한 5회 내에서 핵심 집중
 6. **양방향 대화 필수**: 리드는 에이전트 응답에 반드시 응답 — Claude Agent는 SendMessage, CCB는 /ask (일방적 결과 수집 금지)
 7. **Phase 분리 필수**: 합의(Phase 4)와 구현(Phase 5)은 별도 프롬프트/스폰 (합치기 금지)
+8. **Plan Review 상호 토론**: Phase 4 합의 전 G3 상호 토론 필수 (hive-quality-gates §4). Designer↔Reviewer 다중 라운드 debate. 합의 불가 시 Gemini 중재.
 
 ---
 
@@ -233,6 +234,13 @@ AskUserQuestion:
     B. "요구사항 재조정 — Phase 1로 되돌아가기"
     C. "해당 팀 제외 — 나머지 팀만 진행"
 ```
+
+### 7-1. G3 Plan Review 연동
+
+Phase 4 합의 루프 시작 전 G3 (PLAN REVIEW) 상호 토론이 완료되어야 한다.
+G3 debate 프로토콜 및 rubric은 hive-quality-gates §4 참조.
+G3 통과 마커: `[PLAN DEBATE — CONSENSUS — overall:{score≥7.0}]`
+이 마커 없이 Phase 4 합의 시작 금지.
 
 ### LEAD DECISION (최종 결정권)
 
