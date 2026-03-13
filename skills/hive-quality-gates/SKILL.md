@@ -1,12 +1,13 @@
 ---
 name: hive-quality-gates
-description: Defines G1-G7 quality gates with hard-gate enforcement, marker protocol, hash verification, and debate-based plan review for /hive workflow. Loaded when /hive processes any phase transition.
+description: Defines G1-G3 quality gates, marker protocol (G1-G7), hash chain verification, and debate-based plan review for /hive workflow. G4-G7 gate details are in hive-tdd-pipeline. Loaded when /hive processes phase transitions.
 user-invocable: false
 ---
 
 # Hive Quality Gates
 
-> 7단계 품질 게이트 정의 + 마커 프로토콜 + 해시 검증.
+> G1-G3 게이트 정의 + 마커 프로토콜(G1-G7) + 해시 검증.
+> G4-G7 게이트는 `hive-tdd-pipeline` 참조.
 > 근거: AgentSpec (ICSE 2026), Meta ACH (FSE 2025), Du et al. (2023).
 
 ---
@@ -44,10 +45,10 @@ user-invocable: false
 
 ## 2. G1: CLARIFY Gate
 
-<HARD-GATE>
+<hard_gate rule="G1_BEFORE_G2">
 Do NOT proceed to G2 (SPEC) unless the conversation contains
 [CLARIFY PASSED]. If absent, execute G1 first. Non-negotiable.
-</HARD-GATE>
+</hard_gate>
 
 유저 요청 수신 시 3가지 명확성 기준 검사:
 
@@ -68,10 +69,10 @@ Do NOT proceed to G2 (SPEC) unless the conversation contains
 
 ## 3. G2: SPEC Gate
 
-<HARD-GATE>
-Do NOT proceed to Phase 1 (Brainstorm) unless the conversation contains
+<hard_gate rule="G2_BEFORE_PHASE0">
+Do NOT proceed to Phase 0 (Prompt Engineering) unless the conversation contains
 [SPEC APPROVED — hash:{sha256}]. If absent, write SPEC first. Non-negotiable.
-</HARD-GATE>
+</hard_gate>
 
 자연어 명세 6개 섹션:
 
@@ -101,11 +102,11 @@ sha256sum <<< '{SPEC내용}' | cut -d' ' -f1
 
 ## 4. G3: PLAN REVIEW Gate (상호 토론)
 
-<HARD-GATE>
-Do NOT proceed to Phase 5 (Execute) unless the conversation contains
-[PLAN DEBATE — CONSENSUS — overall:{score}] with score >= 7.0.
+<hard_gate rule="G3_BEFORE_EXECUTE">
+Do NOT proceed to Phase 4 (Consensus) or Phase 5 (Execute) unless the conversation
+contains [PLAN DEBATE — CONSENSUS — overall:{score}] with score >= 7.0.
 Non-negotiable.
-</HARD-GATE>
+</hard_gate>
 
 ### 상호 토론 프로토콜
 
