@@ -1,7 +1,7 @@
 {
   "name": "hive",
-  "version": "1.6.0",
-  "description": "Multi-provider AI team orchestration (Claude/Codex/Gemini) with structured consensus protocol. Brainstorm, analyze codebase, decompose into teams, reach consensus, then execute in parallel waves.",
+  "version": "2.0.0",
+  "description": "Multi-provider AI team orchestration with quality pipeline (Claude/Codex/Gemini). Brainstorm, analyze codebase, decompose into teams, reach consensus, then execute in parallel waves.",
   "author": {
     "name": "inhyoe"
   },
