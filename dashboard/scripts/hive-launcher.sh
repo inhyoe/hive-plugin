@@ -49,7 +49,12 @@ cmd_port_hash() {
 # === Port Probe ===
 port_available() {
   local port="$1"
-  ! lsof -Pi :"$port" -sTCP:LISTEN -t >/dev/null 2>&1
+  # Check both IPv4 and IPv6 using ss (more reliable than lsof)
+  if command -v ss &>/dev/null; then
+    ! ss -tlnH "sport = :$port" 2>/dev/null | grep -q ":$port"
+  else
+    ! lsof -Pi :"$port" -sTCP:LISTEN -t >/dev/null 2>&1
+  fi
 }
 
 find_available_ports() {
@@ -231,28 +236,51 @@ cmd_start() {
     (cd "$DASHBOARD_DIR" && npm install --silent 2>/dev/null)
   fi
 
+  local log_dir="$STATE_DIR/logs"
+  mkdir -p "$log_dir"
+
   # Start event server
-  HIVE_STATE_DIR="$STATE_DIR" PORT="$event_port" npx --prefix "$SERVER_DIR" tsx "$SERVER_DIR/event-server.ts" >/dev/null 2>&1 &
+  HIVE_STATE_DIR="$STATE_DIR" PORT="$event_port" npx --prefix "$SERVER_DIR" tsx "$SERVER_DIR/event-server.ts" > "$log_dir/event-server.log" 2>&1 &
   local event_pid=$!
 
   # Start dashboard
   log "Starting Dashboard on port $dash_port..."
-  (cd "$DASHBOARD_DIR" && NEXT_PUBLIC_WS_URL="ws://localhost:$event_port" npm run dev -- --port "$dash_port" >/dev/null 2>&1) &
+  (cd "$DASHBOARD_DIR" && NEXT_PUBLIC_WS_URL="ws://localhost:$event_port" npm run dev -- --port "$dash_port") > "$log_dir/dashboard.log" 2>&1 &
   local dash_pid=$!
 
-  sleep 5
+  # Wait for ports to become active (max 20s)
+  local wait_tries=0
+  while [ $wait_tries -lt 20 ]; do
+    if ! port_available "$event_port" && ! port_available "$dash_port"; then
+      break
+    fi
+    sleep 1
+    wait_tries=$((wait_tries + 1))
+  done
 
-  # Verify processes started
-  if ! process_alive "$event_pid" || ! process_alive "$dash_pid"; then
-    err "Failed to start servers"
+  # Verify by port occupancy
+  if port_available "$event_port" || port_available "$dash_port"; then
+    err "Failed to start servers (ports not active after 20s)"
     kill "$event_pid" 2>/dev/null || true
     kill "$dash_pid" 2>/dev/null || true
     release_lock
     exit 1
   fi
 
-  # Write runtime
-  write_runtime "$event_port" "$dash_port" "$event_pid" "$dash_pid"
+  # Resolve actual PIDs from port listeners
+  local actual_event_pid actual_dash_pid
+  if command -v ss &>/dev/null; then
+    actual_event_pid=$(ss -tlnpH "sport = :$event_port" 2>/dev/null | grep -oP 'pid=\K[0-9]+' | head -1)
+    actual_dash_pid=$(ss -tlnpH "sport = :$dash_port" 2>/dev/null | grep -oP 'pid=\K[0-9]+' | head -1)
+  else
+    actual_event_pid=$(lsof -Pi :"$event_port" -sTCP:LISTEN -t 2>/dev/null | head -1)
+    actual_dash_pid=$(lsof -Pi :"$dash_port" -sTCP:LISTEN -t 2>/dev/null | head -1)
+  fi
+  actual_event_pid="${actual_event_pid:-$event_pid}"
+  actual_dash_pid="${actual_dash_pid:-$dash_pid}"
+
+  # Write runtime with actual PIDs
+  write_runtime "$event_port" "$dash_port" "$actual_event_pid" "$actual_dash_pid"
 
   release_lock
   trap - EXIT
