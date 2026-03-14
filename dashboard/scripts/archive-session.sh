@@ -32,17 +32,20 @@ fi
 
 # Generate summary JSON
 TOTAL_EVENTS=$(wc -l < "$ARCHIVE_FILE")
-TEAMS=$(grep -o '"team.created"' "$ARCHIVE_FILE" 2>/dev/null | wc -l)
-PASSED=$(grep -o '"success":true' "$ARCHIVE_FILE" 2>/dev/null | wc -l)
-FAILED=$(grep -o '"success":false' "$ARCHIVE_FILE" 2>/dev/null | wc -l)
+TEAMS=$(grep -c '"team.created"' "$ARCHIVE_FILE" 2>/dev/null || true)
+TEAMS=${TEAMS:-0}
+PASSED=$(grep -c '"success":true' "$ARCHIVE_FILE" 2>/dev/null || true)
+PASSED=${PASSED:-0}
+FAILED=$(grep -c '"success":false' "$ARCHIVE_FILE" 2>/dev/null || true)
+FAILED=${FAILED:-0}
 START_TIME=$(head -1 "$ARCHIVE_FILE" | grep -o '"timestamp":"[^"]*"' | head -1 | sed 's/"timestamp":"//;s/"//')
 END_TIME=$(tail -1 "$ARCHIVE_FILE" | grep -o '"timestamp":"[^"]*"' | head -1 | sed 's/"timestamp":"//;s/"//')
 
 # Extract providers used
-PROVIDERS=$(grep -o '"provider":"[^"]*"' "$ARCHIVE_FILE" 2>/dev/null | sort -u | sed 's/"provider":"//;s/"//' | tr '\n' ',' | sed 's/,$//')
+PROVIDERS=$(grep -o '"provider":"[^"]*"' "$ARCHIVE_FILE" 2>/dev/null | sort -u | sed 's/"provider":"//;s/"//' | tr '\n' ',' | sed 's/,$//' || echo "")
 
 # Extract team IDs
-TEAM_IDS=$(grep -o '"teamId":"[^"]*"' "$ARCHIVE_FILE" 2>/dev/null | sort -u | sed 's/"teamId":"//;s/"//' | tr '\n' ',' | sed 's/,$//')
+TEAM_IDS=$(grep -o '"teamId":"[^"]*"' "$ARCHIVE_FILE" 2>/dev/null | sort -u | sed 's/"teamId":"//;s/"//' | tr '\n' ',' | sed 's/,$//' || echo "")
 
 # Write summary
 SUMMARY_FILE="$HISTORY_DIR/${SESSION_ID}.summary.json"

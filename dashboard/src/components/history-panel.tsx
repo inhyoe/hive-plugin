@@ -16,7 +16,15 @@ interface SessionSummary {
   project: string;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_HISTORY_API || 'http://localhost:3570';
+function getHistoryApiBase(): string {
+  if (process.env.NEXT_PUBLIC_HISTORY_API) return process.env.NEXT_PUBLIC_HISTORY_API;
+  // Derive from WebSocket URL: ws://localhost:PORT → http://localhost:PORT+100
+  const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3001';
+  const wsPort = parseInt(wsUrl.replace(/.*:(\d+).*/, '$1'), 10) || 3001;
+  return `http://localhost:${wsPort + 100}`;
+}
+
+const API_BASE = getHistoryApiBase();
 
 export function HistoryPanel() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
