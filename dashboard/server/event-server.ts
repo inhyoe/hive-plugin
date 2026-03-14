@@ -56,8 +56,9 @@ const httpServer = createServer((req, res) => {
   res.end(JSON.stringify({ error: 'Not found' }));
 });
 
-httpServer.listen(PORT + 1, () => {
-  console.log(`History API listening on http://localhost:${PORT + 1}/api/history`);
+const HTTP_PORT = Number(process.env.HISTORY_PORT) || PORT + 100;
+httpServer.listen(HTTP_PORT, () => {
+  console.log(`History API listening on http://localhost:${HTTP_PORT}/api/history`);
 });
 
 const wss = new WebSocketServer({ port: PORT });

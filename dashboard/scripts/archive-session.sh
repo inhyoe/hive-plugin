@@ -19,9 +19,16 @@ fi
 
 mkdir -p "$HISTORY_DIR"
 
-# Archive events
+# Archive events — filter by sessionId only
 ARCHIVE_FILE="$HISTORY_DIR/${SESSION_ID}.jsonl"
-cp "$EVENTS_FILE" "$ARCHIVE_FILE"
+grep "\"sessionId\":\"${SESSION_ID}\"" "$EVENTS_FILE" > "$ARCHIVE_FILE" || true
+
+# Skip if no matching events
+if [ ! -s "$ARCHIVE_FILE" ]; then
+  echo "[archive] No events matching session $SESSION_ID"
+  rm -f "$ARCHIVE_FILE"
+  exit 0
+fi
 
 # Generate summary JSON
 TOTAL_EVENTS=$(wc -l < "$ARCHIVE_FILE")

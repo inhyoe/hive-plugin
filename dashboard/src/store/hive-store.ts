@@ -38,8 +38,9 @@ export const useHiveStore = create<HiveState>((set) => ({
     set((state) => {
       // Session filtering: ignore events from different sessions
       if (state.sessionId && event.sessionId && event.sessionId !== state.sessionId) {
-        // Exception: allow if this is a new session starting (phase 0 enter)
-        if (!(event.type === 'phase.transition' && event.payload && (event.payload as { status?: string }).status === 'enter')) {
+        // Exception: allow only if this is a brand new session starting (phase 0 enter)
+        const p = event.payload as { phase?: number; status?: string };
+        if (!(event.type === 'phase.transition' && p.status === 'enter' && p.phase === 0)) {
           return state; // silently ignore foreign session events
         }
       }

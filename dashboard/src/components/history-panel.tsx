@@ -16,7 +16,7 @@ interface SessionSummary {
   project: string;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_HISTORY_API || 'http://localhost:3002';
+const API_BASE = process.env.NEXT_PUBLIC_HISTORY_API || 'http://localhost:3570';
 
 export function HistoryPanel() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
