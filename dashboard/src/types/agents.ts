@@ -1,6 +1,7 @@
 import type { AgentStatus, Provider } from './events';
 
 export interface AgentNode {
+  [key: string]: unknown;
   teamId: string;
   agentName: string;
   provider: Provider;
@@ -13,6 +14,7 @@ export interface AgentNode {
 }
 
 export interface LeadNode {
+  [key: string]: unknown;
   provider: 'claude';
   status: 'orchestrating' | 'idle';
   currentPhase: number;
