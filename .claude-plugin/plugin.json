@@ -8,6 +8,5 @@
   "repository": "https://github.com/inhyoe/hive-plugin",
   "license": "MIT",
   "keywords": ["orchestration", "multi-agent", "consensus", "team-builder", "multi-provider", "dashboard", "real-time", "visualization"],
-  "skills": "./skills/",
-  "hooks": "./hooks/hooks.json"
+  "skills": "./skills/"
 }

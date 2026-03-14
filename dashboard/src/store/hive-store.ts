@@ -100,12 +100,14 @@ export const useHiveStore = create<HiveState>((set) => ({
           };
         }
         case 'consensus.update': {
-          const { teamId, round } = event.payload;
+          const { teamId, round, response } = event.payload;
           const worker = state.workers[teamId];
           if (!worker) return { eventLog };
+          // COUNTER/CLARIFY means discussion is ongoing — keep worker as 'working'
+          const status = response === 'AGREE' ? worker.status : 'working';
           return {
             eventLog,
-            workers: { ...state.workers, [teamId]: { ...worker, consensusRounds: round } },
+            workers: { ...state.workers, [teamId]: { ...worker, consensusRounds: round, status } },
           };
         }
         case 'execution.result': {

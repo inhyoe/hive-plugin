@@ -150,18 +150,63 @@ describe('useHiveStore', () => {
     expect(state.eventLog).toEqual([event]);
   });
 
-  it('updates consensus rounds on consensus.update', () => {
+  it('updates consensus rounds on consensus.update AGREE without changing status', () => {
     createTeam();
 
-    const event = {
+    emit({
+      ...baseEvent,
+      type: 'agent.status',
+      payload: { teamId: 'T1', provider: 'codex', status: 'working', currentTask: 'Reviewing' },
+    } satisfies AgentStatusEvent);
+
+    emit({
       ...baseEvent,
       type: 'consensus.update',
       payload: { teamId: 'T1', round: 4, response: 'AGREE' },
-    } satisfies ConsensusUpdateEvent;
+    } satisfies ConsensusUpdateEvent);
 
-    emit(event);
+    const worker = useHiveStore.getState().workers.T1;
+    expect(worker?.consensusRounds).toBe(4);
+    expect(worker?.status).toBe('working');
+  });
 
-    expect(useHiveStore.getState().workers.T1?.consensusRounds).toBe(4);
+  it('sets worker status to working on consensus.update COUNTER', () => {
+    createTeam();
+
+    // Simulate agent marked as done (the bug scenario)
+    emit({
+      ...baseEvent,
+      type: 'agent.status',
+      payload: { teamId: 'T1', provider: 'codex', status: 'done', currentTask: '' },
+    } satisfies AgentStatusEvent);
+
+    emit({
+      ...baseEvent,
+      type: 'consensus.update',
+      payload: { teamId: 'T1', round: 2, response: 'COUNTER' },
+    } satisfies ConsensusUpdateEvent);
+
+    const worker = useHiveStore.getState().workers.T1;
+    expect(worker?.status).toBe('working');
+    expect(worker?.consensusRounds).toBe(2);
+  });
+
+  it('sets worker status to working on consensus.update CLARIFY', () => {
+    createTeam();
+
+    emit({
+      ...baseEvent,
+      type: 'agent.status',
+      payload: { teamId: 'T1', provider: 'codex', status: 'done', currentTask: '' },
+    } satisfies AgentStatusEvent);
+
+    emit({
+      ...baseEvent,
+      type: 'consensus.update',
+      payload: { teamId: 'T1', round: 1, response: 'CLARIFY' },
+    } satisfies ConsensusUpdateEvent);
+
+    expect(useHiveStore.getState().workers.T1?.status).toBe('working');
   });
 
   it('marks execution success as done and stores changed files', () => {
