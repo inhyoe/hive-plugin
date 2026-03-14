@@ -533,6 +533,8 @@ Options: A. 리드가 직접 처리 B. 해당 팀 제외 C. 전체 중단
 Phase 5 완료 후 반드시:
   1. 세션 요약 이벤트 발행:
      Bash("bash $HIVE_PLUGIN_DIR/dashboard/scripts/emit-event.sh session.summary $HIVE_SESSION_ID '{\"totalTeams\":N,\"passed\":P,\"failed\":F,\"totalFiles\":T,\"totalChanges\":C}'" || true)
-  2. 대시보드 종료 (본인 세션만):
-     Bash("HIVE_SESSION_ID=$HIVE_SESSION_ID bash $HIVE_PLUGIN_DIR/dashboard/scripts/hive-launcher.sh stop" || true)
+  2. 세션 아카이브 + 학습:
+     Bash("bash $HIVE_PLUGIN_DIR/dashboard/scripts/archive-session.sh $(cat .hive-state/session-id)" || true)
+  3. 대시보드 종료 (본인 세션만):
+     Bash("HIVE_SESSION_ID=$(cat .hive-state/session-id) bash $HIVE_PLUGIN_DIR/dashboard/scripts/hive-launcher.sh stop" || true)
 ```

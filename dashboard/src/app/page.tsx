@@ -8,6 +8,7 @@ import { PipelinePanel } from '@/components/pipeline-panel';
 import { AgentDetailPanel } from '@/components/agent-detail-panel';
 import { EventLog } from '@/components/event-log';
 import { ResultsSummary } from '@/components/results-summary';
+import { HistoryPanel } from '@/components/history-panel';
 
 export default function Home() {
   useWebSocket();
@@ -21,6 +22,7 @@ export default function Home() {
       <header className="flex items-center justify-between px-6 py-3 border-b border-gray-800 bg-gray-900 shrink-0">
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-bold tracking-tight">Hive Dashboard</h1>
+          <HistoryPanel />
           {sessionId && (
             <span className="text-xs font-mono text-gray-500 bg-gray-800 px-2 py-0.5 rounded">
               {sessionId}

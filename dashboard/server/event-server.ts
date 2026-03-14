@@ -1,4 +1,5 @@
-import { createReadStream, existsSync, statSync } from 'fs';
+import { createReadStream, existsSync, statSync, readdirSync, readFileSync } from 'fs';
+import { createServer } from 'http';
 import { watch } from 'chokidar';
 import { WebSocketServer, WebSocket } from 'ws';
 import { resolve } from 'path';
@@ -7,6 +8,57 @@ const PORT = Number(process.env.PORT) || 3001;
 const STATE_DIR = resolve(process.env.HIVE_STATE_DIR || '../../.hive-state');
 const EVENTS_FILE = resolve(STATE_DIR, 'events.jsonl');
 const MAX_REPLAY_BUFFER = 1000;
+
+const HISTORY_DIR = resolve(STATE_DIR, 'history');
+
+// HTTP server for history API
+const httpServer = createServer((req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Content-Type', 'application/json');
+
+  if (req.url === '/api/history') {
+    // List all sessions
+    if (!existsSync(HISTORY_DIR)) {
+      res.end(JSON.stringify([]));
+      return;
+    }
+    const summaries = readdirSync(HISTORY_DIR)
+      .filter(f => f.endsWith('.summary.json'))
+      .map(f => {
+        try { return JSON.parse(readFileSync(resolve(HISTORY_DIR, f), 'utf-8')); }
+        catch { return null; }
+      })
+      .filter(Boolean)
+      .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+    res.end(JSON.stringify(summaries));
+    return;
+  }
+
+  if (req.url?.startsWith('/api/history/')) {
+    // Get specific session events
+    const sessionId = req.url.replace('/api/history/', '');
+    const file = resolve(HISTORY_DIR, `${sessionId}.jsonl`);
+    if (!existsSync(file)) {
+      res.statusCode = 404;
+      res.end(JSON.stringify({ error: 'Session not found' }));
+      return;
+    }
+    const events = readFileSync(file, 'utf-8')
+      .split('\n')
+      .filter(l => l.trim())
+      .map(l => { try { return JSON.parse(l); } catch { return null; } })
+      .filter(Boolean);
+    res.end(JSON.stringify(events));
+    return;
+  }
+
+  res.statusCode = 404;
+  res.end(JSON.stringify({ error: 'Not found' }));
+});
+
+httpServer.listen(PORT + 1, () => {
+  console.log(`History API listening on http://localhost:${PORT + 1}/api/history`);
+});
 
 const wss = new WebSocketServer({ port: PORT });
 const clients = new Set<WebSocket>();
