@@ -128,10 +128,12 @@ Phase 3 팀 구성안에 프로바이더 분배 비율을 명시해야 한다.
 /hive 진입 즉시 (Phase Router 전):
   Step 1. 플러그인 경로 탐색:
     HIVE_PLUGIN_DIR 탐색 순서:
-      a) 환경변수 HIVE_PLUGIN_DIR (설정되어 있으면)
-      b) ~/.claude/plugins/hive/ (존재하면)
-      c) 현재 프로젝트에 .claude-plugin/plugin.json이 있으면 현재 디렉토리
-      d) 없으면 대시보드 없이 진행 (경고만 출력, 스킵)
+      a) 환경변수 CLAUDE_PLUGIN_ROOT (Claude Plugin 시스템이 자동 설정)
+      b) 환경변수 HIVE_PLUGIN_DIR (수동 설정)
+      c) ~/.claude/plugins/cache/hive/ (Plugin 설치 캐시)
+      d) ~/.claude/plugins/hive/ (수동 git clone 설치)
+      e) 현재 프로젝트에 .claude-plugin/plugin.json이 있으면 현재 디렉토리
+      f) 없으면 대시보드 없이 진행 (경고만 출력, 스킵)
   Step 2. 세션 ID 생성 + 대시보드 시작:
     Bash("export HIVE_SESSION_ID='hive-$(date +%s)-$$' && bash $HIVE_PLUGIN_DIR/dashboard/scripts/hive-launcher.sh start")
   Step 3. 상태 확인:
