@@ -58,7 +58,7 @@ function readNewLines() {
   });
 
   let newData = '';
-  stream.on('data', (chunk: string) => {
+  stream.on('data', (chunk) => {
     newData += chunk;
   });
 
