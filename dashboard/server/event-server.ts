@@ -13,7 +13,11 @@ const HISTORY_DIR = resolve(STATE_DIR, 'history');
 
 // HTTP server for history API
 const httpServer = createServer((req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // CORS: localhost only (prevents remote exfiltration)
+  const origin = req.headers.origin || '';
+  if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
   res.setHeader('Content-Type', 'application/json');
 
   if (req.url === '/api/history') {
@@ -37,6 +41,12 @@ const httpServer = createServer((req, res) => {
   if (req.url?.startsWith('/api/history/')) {
     // Get specific session events
     const sessionId = req.url.replace('/api/history/', '');
+    // Sanitize: whitelist regex only (blocks traversal, encoded chars, null bytes)
+    if (!/^[a-zA-Z0-9_\-]+$/.test(sessionId)) {
+      res.statusCode = 400;
+      res.end(JSON.stringify({ error: 'Invalid session ID' }));
+      return;
+    }
     const file = resolve(HISTORY_DIR, `${sessionId}.jsonl`);
     if (!existsSync(file)) {
       res.statusCode = 404;
