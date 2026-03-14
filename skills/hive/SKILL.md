@@ -120,6 +120,59 @@ Phase 3 팀 구성안에 프로바이더 분배 비율을 명시해야 한다.
 
 ---
 
+## Dashboard Auto-Launch
+
+/hive 진입 시 실시간 대시보드를 자동 기동합니다.
+
+```
+/hive 진입 즉시 (Phase Router 전):
+  Step 1. 플러그인 경로 탐색:
+    HIVE_PLUGIN_DIR 탐색 순서:
+      a) 환경변수 HIVE_PLUGIN_DIR (설정되어 있으면)
+      b) ~/.claude/plugins/hive/ (존재하면)
+      c) 현재 프로젝트에 .claude-plugin/plugin.json이 있으면 현재 디렉토리
+      d) 없으면 대시보드 없이 진행 (경고만 출력, 스킵)
+  Step 2. 세션 ID 생성 + 대시보드 시작:
+    Bash("export HIVE_SESSION_ID='hive-$(date +%s)-$$' && bash $HIVE_PLUGIN_DIR/dashboard/scripts/hive-launcher.sh start")
+  Step 3. 상태 확인:
+    Bash("bash $HIVE_PLUGIN_DIR/dashboard/scripts/hive-launcher.sh status")
+
+/hive 완료 시 (Phase 5 종료 후 또는 중단 시):
+  Bash("HIVE_SESSION_ID=$HIVE_SESSION_ID bash $HIVE_PLUGIN_DIR/dashboard/scripts/hive-launcher.sh stop")
+
+대시보드 시작 실패 시 /hive 워크플로우는 중단하지 않음 (대시보드는 부가 기능).
+```
+
+---
+
+## Event Emission
+
+각 Phase/Gate 전환 시 이벤트를 발행합니다. 대시보드가 실행 중이 아니어도 안전합니다.
+
+```
+이벤트 발행 방법:
+  Bash("bash $HIVE_PLUGIN_DIR/dashboard/scripts/emit-event.sh <type> $HIVE_SESSION_ID '<payload>'")
+
+발행 시점:
+  | 시점 | type | payload 예시 |
+  |------|------|-------------|
+  | Phase 진입 | phase.transition | {"phase":0,"status":"enter"} |
+  | Phase 종료 | phase.transition | {"phase":0,"status":"exit"} |
+  | Gate 통과/실패 | gate.update | {"gate":"G1","status":"passed"} |
+  | 팀 생성 | team.created | {"teamId":"T1","modules":["auth"],"provider":"claude","agentName":"a1"} |
+  | 에이전트 스폰 | agent.spawn | {"teamId":"T1","provider":"claude","spawnMethod":"Agent"} |
+  | 에이전트 상태 | agent.status | {"teamId":"T1","provider":"claude","status":"working","currentTask":"구현 중"} |
+  | 리드↔워커 메시지 | agent.message | {"from":"T1","to":"lead","direction":"worker→lead","summary":"70% 완료"} |
+  | 합의 응답 | consensus.update | {"teamId":"T1","round":1,"response":"AGREE"} |
+  | Wave 전환 | wave.transition | {"waveId":1,"teams":["T1","T2"],"status":"start"} |
+  | 실행 결과 | execution.result | {"teamId":"T1","changedFiles":["a.ts"],"linesAdded":100,"linesRemoved":5,"success":true} |
+  | 세션 완료 | session.summary | {"totalTeams":3,"passed":3,"failed":0,"totalFiles":8,"totalChanges":500} |
+
+emit-event.sh가 없거나 실패해도 워크플로우는 중단하지 않음 (|| true).
+```
+
+---
+
 ## Phase Router
 
 Phase 실행 순서 (순차):

@@ -11,6 +11,32 @@ user-invocable: false
 
 ---
 
+## Event Emission (Dashboard 연동)
+
+각 Phase 진입/종료 시 아래 패턴으로 이벤트를 발행합니다:
+
+```
+Phase 진입 시:
+  Bash("bash $HIVE_PLUGIN_DIR/dashboard/scripts/emit-event.sh phase.transition $HIVE_SESSION_ID '{\"phase\":N,\"status\":\"enter\"}'" || true)
+
+Phase 종료 시:
+  Bash("bash $HIVE_PLUGIN_DIR/dashboard/scripts/emit-event.sh phase.transition $HIVE_SESSION_ID '{\"phase\":N,\"status\":\"exit\"}'" || true)
+
+Gate 통과 시:
+  Bash("bash $HIVE_PLUGIN_DIR/dashboard/scripts/emit-event.sh gate.update $HIVE_SESSION_ID '{\"gate\":\"G1\",\"status\":\"passed\"}'" || true)
+
+팀 생성 시 (Phase 3):
+  Bash("bash $HIVE_PLUGIN_DIR/dashboard/scripts/emit-event.sh team.created $HIVE_SESSION_ID '{\"teamId\":\"T1\",\"modules\":[\"auth\"],\"provider\":\"claude\",\"agentName\":\"a1\"}'" || true)
+
+에이전트 상태 변경 시:
+  Bash("bash $HIVE_PLUGIN_DIR/dashboard/scripts/emit-event.sh agent.status $HIVE_SESSION_ID '{\"teamId\":\"T1\",\"provider\":\"claude\",\"status\":\"working\",\"currentTask\":\"구현 중\"}'" || true)
+
+emit-event.sh 부재/실패 시 워크플로우는 중단하지 않음 (|| true 필수).
+$HIVE_PLUGIN_DIR과 $HIVE_SESSION_ID는 hive/SKILL.md의 Dashboard Auto-Launch 섹션에서 설정됨.
+```
+
+---
+
 ## Phase 0: Prompt Engineering & Resource Discovery (프롬프트 엔지니어링 + 리소스 탐색)
 
 <hard_gate rule="QUALITY_GATES_G1_G2">
@@ -496,4 +522,14 @@ Options: A. 리드가 직접 처리 B. 해당 팀 제외 C. 전체 중단
 | 팀 | 상태 | 변경 파일 | 합의 라운드 |
 | T1 | ... | files... | N |
 총 변경: N files, +X/-Y | 후속: [기록]
+```
+
+### 5-7. 대시보드 이벤트 발행 + 종료
+
+```
+Phase 5 완료 후 반드시:
+  1. 세션 요약 이벤트 발행:
+     Bash("bash $HIVE_PLUGIN_DIR/dashboard/scripts/emit-event.sh session.summary $HIVE_SESSION_ID '{\"totalTeams\":N,\"passed\":P,\"failed\":F,\"totalFiles\":T,\"totalChanges\":C}'" || true)
+  2. 대시보드 종료 (본인 세션만):
+     Bash("HIVE_SESSION_ID=$HIVE_SESSION_ID bash $HIVE_PLUGIN_DIR/dashboard/scripts/hive-launcher.sh stop" || true)
 ```
