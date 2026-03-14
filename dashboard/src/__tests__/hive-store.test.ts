@@ -256,7 +256,6 @@ describe('useHiveStore', () => {
 
     const event = {
       ...baseEvent,
-      sessionId: 'session-99',
       type: 'session.summary',
       payload: {
         totalTeams: 2,
@@ -271,7 +270,7 @@ describe('useHiveStore', () => {
 
     const state = useHiveStore.getState();
     expect(state.lead.status).toBe('idle');
-    expect(state.sessionId).toBe('session-99');
+    expect(state.sessionId).toBe('session-1');
     expect(state.eventLog.at(-1)).toEqual(event);
   });
 

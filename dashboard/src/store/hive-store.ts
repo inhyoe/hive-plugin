@@ -36,12 +36,33 @@ export const useHiveStore = create<HiveState>((set) => ({
 
   handleEvent: (event) =>
     set((state) => {
+      // Session filtering: ignore events from different sessions
+      if (state.sessionId && event.sessionId && event.sessionId !== state.sessionId) {
+        // Exception: allow if this is a new session starting (phase 0 enter)
+        if (!(event.type === 'phase.transition' && event.payload && (event.payload as { status?: string }).status === 'enter')) {
+          return state; // silently ignore foreign session events
+        }
+      }
+
       const eventLog = [...state.eventLog.slice(-199), event];
 
       switch (event.type) {
         case 'phase.transition': {
           const { phase, status } = event.payload;
           if (status === 'enter') {
+            // Auto-reset on new session start (different sessionId + early phase)
+            const isNewSession = event.sessionId && event.sessionId !== state.sessionId;
+            if (isNewSession) {
+              return {
+                connected: state.connected,
+                sessionId: event.sessionId,
+                currentPhase: phase,
+                gates: { ...initialGates },
+                lead: { provider: 'claude', status: 'orchestrating', currentPhase: phase },
+                workers: {},
+                eventLog: [event],
+              };
+            }
             return {
               eventLog,
               currentPhase: phase,
@@ -58,6 +79,7 @@ export const useHiveStore = create<HiveState>((set) => ({
           const { teamId, modules, provider, agentName } = event.payload;
           return {
             eventLog,
+            sessionId: state.sessionId || event.sessionId,
             workers: {
               ...state.workers,
               [teamId]: {
