@@ -1,16 +1,23 @@
 {
   "name": "hive-marketplace",
-  "description": "Hive multi-agent orchestration plugin with real-time dashboard",
+  "owner": {
+    "name": "inhyoe",
+    "email": "inhyoe@users.noreply.github.com"
+  },
+  "metadata": {
+    "description": "Hive multi-agent orchestration plugin with real-time dashboard",
+    "version": "1.0.0"
+  },
   "plugins": [
     {
       "name": "hive",
       "description": "Multi-provider AI team orchestration with real-time dashboard and quality pipeline (Claude/Codex/Gemini)",
       "version": "3.0.0",
-      "author": { "name": "inhyoe" },
       "source": {
-        "type": "git",
+        "source": "url",
         "url": "https://github.com/inhyoe/hive-plugin.git"
-      }
+      },
+      "strict": true
     }
   ]
 }
