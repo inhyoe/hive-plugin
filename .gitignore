@@ -10,3 +10,6 @@ __pycache__/
 
 # Hive quality pipeline runtime state
 .hive-state/
+
+# Node dependencies
+node_modules/
