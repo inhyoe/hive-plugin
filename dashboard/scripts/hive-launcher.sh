@@ -243,9 +243,12 @@ cmd_start() {
   HIVE_STATE_DIR="$STATE_DIR" PORT="$event_port" npx --prefix "$SERVER_DIR" tsx "$SERVER_DIR/event-server.ts" > "$log_dir/event-server.log" 2>&1 &
   local event_pid=$!
 
-  # Start dashboard
+  # Start dashboard (project-specific distDir to avoid lock conflicts across projects)
   log "Starting Dashboard on port $dash_port..."
-  (cd "$DASHBOARD_DIR" && NEXT_PUBLIC_WS_URL="ws://localhost:$event_port" npm run dev -- --port "$dash_port") > "$log_dir/dashboard.log" 2>&1 &
+  local next_dir="$STATE_DIR/.next"
+  local tsconfig_bak="$STATE_DIR/.tsconfig-original.json"
+  cp "$DASHBOARD_DIR/tsconfig.json" "$tsconfig_bak" 2>/dev/null || true
+  (cd "$DASHBOARD_DIR" && HIVE_NEXT_DIR="$next_dir" NEXT_PUBLIC_WS_URL="ws://localhost:$event_port" npm run dev -- --port "$dash_port") > "$log_dir/dashboard.log" 2>&1 &
   local dash_pid=$!
 
   # Wait for ports to become active (max 20s)
@@ -320,6 +323,13 @@ cmd_stop() {
   if process_alive "$dash_pid"; then
     kill "$dash_pid" 2>/dev/null
     log "Dashboard stopped (PID $dash_pid)"
+  fi
+
+  # Restore tsconfig.json if backup exists (undo Next.js auto-modifications)
+  local tsconfig_bak="$STATE_DIR/.tsconfig-original.json"
+  if [ -f "$tsconfig_bak" ]; then
+    cp "$tsconfig_bak" "$DASHBOARD_DIR/tsconfig.json" 2>/dev/null || true
+    rm -f "$tsconfig_bak"
   fi
 
   rm -f "$RUNTIME_FILE"

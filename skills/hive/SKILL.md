@@ -116,6 +116,23 @@ Phase 3 팀 구성안에 프로바이더 분배 비율을 명시해야 한다.
 - CCB duplicate/out-of-order reply 무시 X (correlation key로 검증 필수)
 - COUNTER/CLARIFY 응답 후 follow-up 누락 X
 - blocked_by 의존성 무시하고 실행 X
+- Phase 4 합의를 "작업 유형" 핑계로 생략 X (검증/리뷰도 합의 필수)
+
+<STOP_AND_VERIFY rule="PHASE4_CANNOT_BE_SKIPPED">
+Phase 4를 건너뛸 수 있다고 생각하는 순간 — 그것은 틀렸다.
+
+| 합리화 | 왜 틀린가 |
+|--------|----------|
+| "검증 작업이니까 합의 불필요" | 검증이든 구현이든 에이전트는 태스크를 이해하고 동의해야 함 |
+| "G3 Plan Review가 합의를 대체" | G3=계획 품질 검증, Phase 4=에이전트별 태스크 합의. 근본적으로 다른 활동 |
+| "LEAD DECISION으로 전부 처리" | LEAD DECISION은 5라운드 실패 후 에스컬레이션용. 합의 바이패스 아님 |
+| "시간이 부족하다" | 합의 없이 구현하면 재작업으로 더 오래 걸림 |
+| "간단한 작업이다" | 프로토콜은 작업 복잡도와 무관하게 100% 적용 |
+
+Phase 5 진입 전 반드시 실행:
+  Bash("bash $HIVE_PLUGIN_DIR/scripts/validate-phase5-entry.sh")
+  → FAIL 시 Phase 5 진입 금지. 누락된 팀의 합의를 먼저 완료할 것.
+</STOP_AND_VERIFY>
 </mindset>
 
 ---

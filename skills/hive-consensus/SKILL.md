@@ -27,6 +27,16 @@ user-invocable: false
 
 ## 2. 병렬 개별 합의 흐름
 
+<hard_gate rule="PHASE4_TEAM_REGISTRY">
+Phase 4 시작 시 반드시 팀 등록 + 마커 디렉토리를 생성한다:
+  Bash("mkdir -p .hive-state/consensus && echo '{\"teams\":[\"T1\",\"T2\",...]}' > .hive-state/teams.json")
+팀별 합의 도달 시 반드시 마커를 생성한다:
+  Bash("echo 'type:CONSENSUS round:N provider:X' > .hive-state/consensus/${TEAM_ID}.marker")
+모든 팀 합의 완료 시:
+  Bash("echo 'all teams consensus' > .hive-state/phase4-complete.marker")
+Phase 5 진입 시 validate-phase5-entry.sh가 이 마커들을 검증한다. 마커 없으면 진입 차단.
+</hard_gate>
+
 ### 2-1. 합의 시작 (리드 → 각 에이전트)
 
 리드가 각 에이전트에게 **해당 팀의 태스크만** 동시 발송:
@@ -343,78 +353,12 @@ LEAD DECISION으로 종료된 팀의 의존 팀(downstream):
 
 ## 11. 금지 패턴
 
-### 일방적 소통
-
-```
-# 이렇게 하면 안 됨
-1. 10개 에이전트를 구현 프롬프트로 한꺼번에 스폰
-2. 에이전트가 다 끝나면 결과만 수집
-3. SendMessage 응답 없이 셧다운
-→ Phase 4 합의 루프가 완전히 스킵됨
-→ 양방향 대화 0건
-```
-
-### 합의+구현 합치기
-
-```
-# 이렇게 하면 안 됨
-Agent(prompt="이 모듈을 분석하고 문제를 찾아서 수정해줘")
-→ TASK PROPOSAL + 구현이 하나의 프롬프트에 합쳐짐
-→ 에이전트가 COUNTER할 기회 없이 바로 구현
-```
-
-### 올바른 패턴
-
-```
-# Phase 4: 합의 (별도 스폰)
-Agent(prompt="[TASK PROPOSAL — TX — R1] 이 모듈에 대해 이런 접근으로 수정하려 합니다. 동의하나요?")
-  ↓
-에이전트: [COUNTER] "X 방식보다 Y가 더 효율적입니다"
-  ↓
-리드 → SendMessage: "Y 방식 수용합니다. Z 부분은 원안 유지합니다."
-  ↓
-에이전트: [AGREE] "수정안에 동의합니다"
-  ↓
-리드 → CONSENSUS 문서 생성
-
-# Phase 5: 구현 (SendMessage로 전달)
-리드 → SendMessage: "CONSENSUS가 확정되었습니다. 아래 내용대로 구현해주세요: ..."
-  ↓
-에이전트: 구현 중간 보고
-  ↓
-리드 → SendMessage: 피드백
-  ↓
-에이전트: 구현 완료 보고
-  ↓
-리드 → CONSENSUS 대비 검증 → 셧다운
-```
-
-### Stale CONSENSUS 재사용
-
-```
-# 이렇게 하면 안 됨
-Phase 5 실패 → Phase 1 요구사항 변경 → 기존 CONSENSUS로 Phase 5 재실행
-→ 변경된 요구사항과 기존 합의가 불일치
-→ 반드시 무효화 매트릭스(§10-1) 확인 후 재합의
-```
-
-### CCB duplicate/out-of-order 무시
-
-```
-# 이렇게 하면 안 됨
-pend로 수집한 응답의 round_id를 확인하지 않고 그대로 처리
-→ 이전 라운드의 지연 응답을 현재 라운드 응답으로 오인
-→ 반드시 correlation key(team_id + round_id) 매칭 확인
-```
-
-### COUNTER/CLARIFY follow-up 누락
-
-```
-# 이렇게 하면 안 됨
-에이전트가 COUNTER → 리드가 응답 없이 다른 팀 작업으로 이동
-→ 해당 팀 합의 루프가 미완료 상태로 방치
-→ 반드시 수용/부분수용/거절로 응답 후 에이전트 재판단 대기
-```
+금지 항목 (각각 프로토콜 위반):
+- **일방적 소통**: 구현 프롬프트로 한꺼번에 스폰 → 결과만 수집 → 양방향 대화 0건
+- **합의+구현 합치기**: TASK PROPOSAL + 구현을 하나의 프롬프트에 → COUNTER 기회 소멸
+- **Stale CONSENSUS**: Phase 5 실패 → 요구사항 변경 → 기존 합의로 재실행 (§10-1 미확인)
+- **CCB duplicate 무시**: round_id 검증 없이 처리 → stale 응답 오인
+- **follow-up 누락**: COUNTER/CLARIFY 후 응답 없이 다른 팀으로 이동
 
 ### blocked_by 의존성 위반 실행
 

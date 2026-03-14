@@ -135,6 +135,28 @@ export const useHiveStore = create<HiveState>((set) => ({
           }
           return { eventLog };
         }
+        case 'agent.spawn': {
+          const { teamId, provider } = event.payload;
+          const worker = state.workers[teamId];
+          if (!worker) return { eventLog };
+          return {
+            eventLog,
+            workers: { ...state.workers, [teamId]: { ...worker, provider, status: 'working' } },
+          };
+        }
+        case 'agent.message':
+          return { eventLog };
+        case 'wave.transition': {
+          const { status: waveStatus } = event.payload;
+          return {
+            eventLog,
+            lead: { ...state.lead, status: waveStatus === 'complete' ? 'idle' : 'orchestrating' },
+          };
+        }
+        case 'cross_feedback':
+        case 'lead.decision':
+        case 'execution.retry':
+          return { eventLog };
         case 'session.summary':
           return {
             eventLog,
