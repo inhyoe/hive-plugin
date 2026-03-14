@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "start": "tsx event-server.ts",
-    "dev": "tsx watch event-server.ts"
+    "dev": "tsx watch event-server.ts",
+    "demo": "tsx demo-events.ts"
   },
   "dependencies": {
     "chokidar": "^4.0.0",
