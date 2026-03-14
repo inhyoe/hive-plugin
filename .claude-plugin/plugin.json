@@ -1,11 +1,13 @@
 {
   "name": "hive",
-  "version": "2.0.0",
-  "description": "Multi-provider AI team orchestration with quality pipeline (Claude/Codex/Gemini). Brainstorm, analyze codebase, decompose into teams, reach consensus, then execute in parallel waves.",
+  "version": "3.0.0",
+  "description": "Multi-provider AI team orchestration with real-time dashboard and quality pipeline (Claude/Codex/Gemini). Brainstorm, analyze codebase, decompose into teams, reach consensus, then execute in parallel waves with live visualization.",
   "author": {
     "name": "inhyoe"
   },
   "repository": "https://github.com/inhyoe/hive-plugin",
   "license": "MIT",
-  "keywords": ["orchestration", "multi-agent", "consensus", "team-builder", "multi-provider"]
+  "keywords": ["orchestration", "multi-agent", "consensus", "team-builder", "multi-provider", "dashboard", "real-time", "visualization"],
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
 }
