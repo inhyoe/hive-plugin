@@ -86,9 +86,22 @@ write_runtime() {
   local timestamp
   timestamp=$(date -u +"%Y-%m-%dT%H:%M:%S.%3NZ" 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-  cat > "$RUNTIME_FILE" << JSONEOF
-{"eventPort":${event_port},"dashboardPort":${dash_port},"eventPid":${event_pid},"dashboardPid":${dash_pid},"startedBy":"${SESSION_ID}","cwd":"$(pwd)","startedAt":"${timestamp}"}
+  if command -v jq &>/dev/null; then
+    jq -cn \
+      --argjson ep "$event_port" --argjson dp "$dash_port" \
+      --argjson epid "$event_pid" --argjson dpid "$dash_pid" \
+      --arg sb "$SESSION_ID" --arg cwd "$(pwd)" --arg ts "$timestamp" \
+      '{eventPort:$ep,dashboardPort:$dp,eventPid:$epid,dashboardPid:$dpid,startedBy:$sb,cwd:$cwd,startedAt:$ts}' \
+      > "$RUNTIME_FILE"
+  else
+    # Fallback: escape quotes in values
+    local safe_sid safe_cwd
+    safe_sid=$(echo "$SESSION_ID" | sed 's/["\]/\\&/g')
+    safe_cwd=$(pwd | sed 's/["\]/\\&/g')
+    cat > "$RUNTIME_FILE" << JSONEOF
+{"eventPort":${event_port},"dashboardPort":${dash_port},"eventPid":${event_pid},"dashboardPid":${dash_pid},"startedBy":"${safe_sid}","cwd":"${safe_cwd}","startedAt":"${timestamp}"}
 JSONEOF
+  fi
 }
 
 read_runtime_field() {
@@ -125,8 +138,16 @@ check_and_clean_stale() {
     return 0  # running (both ports occupied)
   fi
 
-  # Stale: clean up dead processes and remove runtime
-  warn "Stale runtime detected, cleaning up..."
+  # Stale: only clean processes we own
+  local owner
+  owner=$(read_runtime_field "startedBy")
+  if [ "$owner" != "$SESSION_ID" ]; then
+    warn "Stale runtime from foreign session (owner=$owner), removing runtime file only"
+    rm -f "$RUNTIME_FILE"
+    return 1  # not running (foreign stale cleaned without killing)
+  fi
+
+  warn "Stale runtime detected (owned by us), cleaning up..."
   if process_alive "$event_pid"; then kill "$event_pid" 2>/dev/null || true; fi
   if process_alive "$dash_pid"; then kill "$dash_pid" 2>/dev/null || true; fi
   rm -f "$RUNTIME_FILE"
@@ -146,7 +167,10 @@ acquire_lock() {
       warn "Lock stale, removing"
       rm -rf "$LOCK_DIR"
     fi
-    mkdir "$LOCK_DIR" 2>/dev/null || true
+    if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+      err "Failed to acquire lock after timeout. Another launcher may be running."
+      exit 1
+    fi
   fi
 }
 
