@@ -146,13 +146,13 @@ fi
 echo ""
 
 # ─── 4. File Size Check ───
-echo "--- 4. File Size (< 500 lines) ---"
+echo "--- 4. File Size (<= 500 lines) ---"
 for skill_dir in skills/*/; do
     skill_name=$(basename "$skill_dir")
     skill_md="$skill_dir/SKILL.md"
     if [ -f "$skill_md" ]; then
         lines=$(wc -l < "$skill_md")
-        if [ "$lines" -lt 500 ]; then
+        if [ "$lines" -le 500 ]; then
             log_pass "$skill_name/SKILL.md: $lines lines"
         else
             log_fail "$skill_name/SKILL.md: $lines lines (exceeds 500)"

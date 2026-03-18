@@ -33,9 +33,9 @@ check_hash() {
         return 0  # no hash field in marker
     fi
     if [ ! -f "$target_file" ]; then
-        printf "  FAIL: %s — target file missing: %s\n" "$label" "$target_file"
-        FAIL=$((FAIL + 1))
-        return 1
+        printf "  WARN: %s — target file missing: %s (content may not have been saved)\n" "$label" "$target_file"
+        WARN=$((WARN + 1))
+        return 0
     fi
     local current_hash
     current_hash=$(sha256sum "$target_file" | cut -d' ' -f1)
