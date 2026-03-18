@@ -121,6 +121,22 @@ MARKER_PATTERNS = {
             r"^\[E2E VALIDATE PASSED — type:(A|B|C) result:.+\]"
         ),
     },
+    "CROSS FEEDBACK": {
+        "template": re.compile(
+            rf"^\[CROSS FEEDBACK — {PLACEHOLDER}→{PLACEHOLDER} — {WAVE_PLACEHOLDER}\]\s*$"
+        ),
+        "instance": re.compile(
+            r"^\[CROSS FEEDBACK — T\d+→T\d+ — W\d+\]\s*$"
+        ),
+    },
+    "FIX REQUEST": {
+        "template": re.compile(
+            rf"^\[FIX REQUEST — {PLACEHOLDER} — {WAVE_PLACEHOLDER} — ref:{PLACEHOLDER}\]\s*$"
+        ),
+        "instance": re.compile(
+            r"^\[FIX REQUEST — T\d+ — W\d+ — ref:.+\]\s*$"
+        ),
+    },
 }
 
 MARKER_START_RE = re.compile(
@@ -128,7 +144,8 @@ MARKER_START_RE = re.compile(
     r"|CLARIFY PASSED|CLARIFY"
     r"|SPEC APPROVED|PLAN DEBATE"
     r"|TDD RED PASSED|IMPLEMENT GREEN PASSED"
-    r"|CROSS-VERIFY PASSED|E2E VALIDATE PASSED)(?:\s+—|\])"
+    r"|CROSS-VERIFY PASSED|E2E VALIDATE PASSED"
+    r"|CROSS FEEDBACK|FIX REQUEST)(?:\s+—|\])"
 )
 
 

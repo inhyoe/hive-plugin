@@ -17,9 +17,21 @@ PASS=0
 FAIL=0
 ERRORS=()
 
-check() {
-  local desc="$1" condition="$2"
-  if eval "$condition"; then
+check_file() {
+  local desc="$1" filepath="$2"
+  if [ -f "$filepath" ]; then
+    echo -e "  ${GREEN}[PASS]${NC} $desc"
+    PASS=$((PASS + 1))
+  else
+    echo -e "  ${RED}[FAIL]${NC} $desc"
+    FAIL=$((FAIL + 1))
+    ERRORS+=("$desc")
+  fi
+}
+
+check_bool() {
+  local desc="$1" result="$2"
+  if [ "$result" = "true" ]; then
     echo -e "  ${GREEN}[PASS]${NC} $desc"
     PASS=$((PASS + 1))
   else
@@ -34,12 +46,12 @@ echo ""
 
 # 1. G3 Plan Review marker
 echo "--- Gate Markers ---"
-check "G3 plan-review marker exists" "[ -f '$STATE_DIR/g3-plan-review.marker' ]"
+check_file "G3 plan-review marker exists" "$STATE_DIR/g3-plan-review.marker"
 
 # 2. Teams registry
 echo ""
 echo "--- Team Registry ---"
-check "teams.json exists" "[ -f '$TEAMS_FILE' ]"
+check_file "teams.json exists" "$TEAMS_FILE"
 
 if [ ! -f "$TEAMS_FILE" ]; then
   echo ""
@@ -60,14 +72,14 @@ if [ -z "$TEAM_IDS" ]; then
 else
   for TEAM_ID in $TEAM_IDS; do
     MARKER="$CONSENSUS_DIR/${TEAM_ID}.marker"
-    check "$TEAM_ID consensus marker" "[ -f '$MARKER' ]"
+    check_file "$TEAM_ID consensus marker" "$MARKER"
 
     if [ -f "$MARKER" ]; then
       # Verify marker has dialogue evidence (at least "round" mention)
       if grep -q "round" "$MARKER" 2>/dev/null; then
-        check "$TEAM_ID has dialogue evidence" "true"
+        check_bool "$TEAM_ID has dialogue evidence" "true"
       else
-        check "$TEAM_ID has dialogue evidence" "false"
+        check_bool "$TEAM_ID has dialogue evidence" "false"
       fi
     fi
   done
@@ -76,7 +88,7 @@ fi
 # 4. Phase 4 complete marker
 echo ""
 echo "--- Phase 4 Completion ---"
-check "phase4-complete.marker exists" "[ -f '$STATE_DIR/phase4-complete.marker' ]"
+check_file "phase4-complete.marker exists" "$STATE_DIR/phase4-complete.marker"
 
 # Summary
 echo ""
