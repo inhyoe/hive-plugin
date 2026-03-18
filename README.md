@@ -117,7 +117,7 @@ Do NOT respond or write code based on inference alone when tools are available.
 | `validate-plugin.sh` | 54-check structural validation |
 | `validate-standards.sh` | 27-check standards compliance |
 | `validate-gates.sh` | Marker chain + hash integrity verification |
-| `test_markers.py` | 21 marker format pattern validation |
+| `test_markers.py` | 20 marker format pattern validation |
 | `run-tests.sh` | Unified test suite runner (5 test categories) |
 
 ### Runtime State
@@ -220,7 +220,7 @@ bash scripts/run-tests.sh
 bash scripts/validate-plugin.sh      # 54 structural checks
 bash scripts/validate-standards.sh   # 27 standard checks
 bash scripts/validate-gates.sh       # Marker chain + hash integrity
-python3 scripts/test_markers.py      # 21 marker format checks
+python3 scripts/test_markers.py      # 20 marker format checks
 ```
 
 ## License

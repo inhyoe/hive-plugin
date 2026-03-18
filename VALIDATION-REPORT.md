@@ -290,7 +290,7 @@ PYEOF
 
 | # | 항목 | 현재 상태 | 권장 |
 |---|------|----------|------|
-| 1 | `allowed-tools` 범위 | 23개 도구 나열 | 오케스트레이션에 필수적. v3.0.0에서 비존재 도구 제거 완료 |
+| 1 | `allowed-tools` 범위 | 21개 도구 나열 | 오케스트레이션에 필수적. v3.0.0에서 비존재 도구 제거 완료 |
 | 2 | `user-invocable` 명시성 | main skill은 absent (기본값 true) | 명시적으로 `user-invocable: true` 추가하면 의도가 더 명확 |
 | 3 | `LEAD DECISION` 마커 테스트 | test_markers.py에서 미검증 | 6종 마커 + LEAD DECISION + HIVE PROGRESS = 8종으로 테스트 확장 |
 | 4 | `context` 필드 활용 | 미사용 | sub-skill을 `context: fork`로 분리 실행하면 context window 절약 가능 |

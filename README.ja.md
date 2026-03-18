@@ -117,7 +117,7 @@ Do NOT respond or write code based on inference alone when tools are available.
 | `validate-plugin.sh` | 54項目の構造検証 |
 | `validate-standards.sh` | 27項目の標準準拠検証 |
 | `validate-gates.sh` | マーカーチェーン + ハッシュ整合性検証 |
-| `test_markers.py` | 21個のマーカーフォーマットパターン検証 |
+| `test_markers.py` | 20個のマーカーフォーマットパターン検証 |
 | `run-tests.sh` | 統合テストスイートランナー（5カテゴリ） |
 
 ### ランタイム状態
@@ -220,7 +220,7 @@ bash scripts/run-tests.sh
 bash scripts/validate-plugin.sh      # 54項目の構造検証
 bash scripts/validate-standards.sh   # 27項目の標準検証
 bash scripts/validate-gates.sh       # マーカーチェーン + ハッシュ整合性
-python3 scripts/test_markers.py      # 21個のマーカーフォーマット検証
+python3 scripts/test_markers.py      # 20個のマーカーフォーマット検証
 ```
 
 ## ライセンス

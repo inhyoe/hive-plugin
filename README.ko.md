@@ -117,7 +117,7 @@ Do NOT respond or write code based on inference alone when tools are available.
 | `validate-plugin.sh` | 54개 구조 검증 |
 | `validate-standards.sh` | 27개 표준 준수 검증 |
 | `validate-gates.sh` | 마커 체인 + 해시 무결성 검증 |
-| `test_markers.py` | 21개 마커 포맷 패턴 검증 |
+| `test_markers.py` | 20개 마커 포맷 패턴 검증 |
 | `run-tests.sh` | 통합 테스트 스위트 실행기 (5개 카테고리) |
 
 ### 런타임 상태
@@ -220,7 +220,7 @@ bash scripts/run-tests.sh
 bash scripts/validate-plugin.sh      # 54개 구조 검증
 bash scripts/validate-standards.sh   # 27개 표준 검증
 bash scripts/validate-gates.sh       # 마커 체인 + 해시 무결성
-python3 scripts/test_markers.py      # 21개 마커 포맷 검증
+python3 scripts/test_markers.py      # 20개 마커 포맷 검증
 ```
 
 ## 라이선스
