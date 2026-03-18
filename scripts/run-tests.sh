@@ -27,6 +27,9 @@ echo "=== HIVE PLUGIN TEST SUITE ==="
 # Structure validation (bash script — must invoke directly)
 run_test "[Structure] validate-plugin.sh" "$SCRIPTS_DIR/validate-plugin.sh"
 
+# Standards validation (bash script)
+run_test "[Standards] validate-standards.sh" "$SCRIPTS_DIR/validate-standards.sh"
+
 # Marker consistency (python)
 run_test "[Markers]   test_markers.py"    python3 "$SCRIPTS_DIR/test_markers.py"
 
