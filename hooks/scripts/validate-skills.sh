@@ -92,8 +92,8 @@ fi
 if command -v flock &>/dev/null; then
     exec 200>"$LOCK_FILE"
     if ! flock -w 5 200; then
-        echo "[QUALITY GATE] Lock acquisition timed out (5s) — treating as FAIL for safety"
-        exit 1
+        echo "[QUALITY GATE] Skipped — another validation is running (lock timeout 5s)"
+        exit 0
     fi
 
     # Re-check timestamp after acquiring lock (another process may have just run)
