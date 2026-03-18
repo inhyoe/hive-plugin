@@ -103,12 +103,12 @@ Do NOT respond or write code based on inference alone when tools are available.
 
 | スキル | 行数 | 役割 |
 |--------|------|------|
-| `hive` | 161 | エントリポイント — Phaseルーター、ハードゲート、プロバイダールール |
-| `hive-workflow` | 499 | Phase 0-5エンジン — プロンプトエンジニアリング、ブレスト、Serena、チーム、実行 |
-| `hive-consensus` | 482 | Phase 4コンセンサスプロトコル — 双方向AGREE/COUNTER/CLARIFY |
-| `hive-spawn-templates` | 174 | プロバイダー別プロンプトテンプレート + 変数プレースホルダー |
-| `hive-quality-gates` | 210 | G1-G3ゲート定義、マーカープロトコル、ハッシュチェーン、討論ルーブリック |
-| `hive-tdd-pipeline` | 173 | G4-G7 TDDループ、エージェント分離、ミューテーション/PBT/E2E検証 |
+| `hive` | 238 | エントリポイント — Phaseルーター、ハードゲート、プロバイダールール |
+| `hive-workflow` | 500 | Phase 0-5エンジン — プロンプトエンジニアリング、ブレスト、Serena、チーム、実行 |
+| `hive-consensus` | 456 | Phase 4コンセンサスプロトコル — 双方向AGREE/COUNTER/CLARIFY |
+| `hive-spawn-templates` | 181 | プロバイダー別プロンプトテンプレート + 変数プレースホルダー |
+| `hive-quality-gates` | 228 | G1-G3ゲート定義、マーカープロトコル、ハッシュチェーン、討論ルーブリック |
+| `hive-tdd-pipeline` | 175 | G4-G7 TDDループ、エージェント分離、ミューテーション/PBT/E2E検証 |
 
 ### スクリプト
 
@@ -117,8 +117,8 @@ Do NOT respond or write code based on inference alone when tools are available.
 | `validate-plugin.sh` | 54項目の構造検証 |
 | `validate-standards.sh` | 27項目の標準準拠検証 |
 | `validate-gates.sh` | マーカーチェーン + ハッシュ整合性検証 |
-| `test_markers.py` | 20個のマーカーフォーマットパターン検証 |
-| `run-tests.sh` | 統合テストスイートランナー（4カテゴリ） |
+| `test_markers.py` | 21個のマーカーフォーマットパターン検証 |
+| `run-tests.sh` | 統合テストスイートランナー（5カテゴリ） |
 
 ### ランタイム状態
 
@@ -208,7 +208,7 @@ cp -r skills/hive-tdd-pipeline ~/.claude/skills/
 - **COUNTER**: 代替案とともに技術的問題を提起（技術的問題発見時は義務）
 - **CLARIFY**: 追加情報を要求
 
-エージェントあたり最大5ラウンド。膠着時はGeminiが調停（2/3多数決）。3ラウンド後の合意失敗時はリードが最終決定。
+エージェントあたり最大5ラウンド。膠着時はGeminiが調停（2/3多数決）。5ラウンド後の合意失敗時はリードが最終決定。
 
 ## 検証
 
@@ -220,7 +220,7 @@ bash scripts/run-tests.sh
 bash scripts/validate-plugin.sh      # 54項目の構造検証
 bash scripts/validate-standards.sh   # 27項目の標準検証
 bash scripts/validate-gates.sh       # マーカーチェーン + ハッシュ整合性
-python3 scripts/test_markers.py      # 20個のマーカーフォーマット検証
+python3 scripts/test_markers.py      # 21個のマーカーフォーマット検証
 ```
 
 ## ライセンス

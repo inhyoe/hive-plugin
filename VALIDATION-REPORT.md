@@ -1,6 +1,6 @@
 # Hive Plugin Validation Report
 
-> **Version**: 1.5.0 | **Date**: 2026-03-07 | **Iterations**: 10회 반복 검증 완료
+> **Version**: 3.0.0 | **Date**: 2026-03-15 | **Iterations**: 10회 반복 검증 완료
 
 ---
 
@@ -137,11 +137,11 @@ PYEOF
 | 1 | 초기 구조 마이그레이션 | P0: plugin.json 생성, commands/→skills/ 마이그레이션. P1: description 영문 3인칭, Agent tool 파라미터 수정. P2: 마커 불일치 수정. P3: 테스트 스크립트 경로 업데이트 | PASS |
 | 2 | 마커/참조 정확성 | `[HIVE CONSENSUS REQUEST]`→`[TASK PROPOSAL]` 수정 (codex/gemini 템플릿). `team_name` 비공식 파라미터 제거 (hive-workflow) | 38+15 PASS |
 | 3 | description 정확도 | hive-workflow: "Phase 1-5"→"Phase 1-3, 5" (Phase 4는 hive-consensus 담당) | 38+15 PASS |
-| 4 | 의미론적 일관성 | 프로바이더 대칭성, SendMessage/TeamCreate 허용성 분석. 추가 이슈 없음 | 38+15 PASS |
+| 4 | 의미론적 일관성 | 프로바이더 대칭성, SendMessage 허용성 분석. v3.0.0에서 TeamCreate/TeamDelete 제거 완료 | 38+15 PASS |
 | 5 | Frontmatter 심층 | `argument-hint: [task-description]` YAML list→string 수정. hive-spawn-templates description에 "when" 트리거 추가 | 38+15 PASS |
 | 6 | 교차 참조 일관성 | 스킬 간 참조, 섹션 번호, LEAD DECISION/HIVE PROGRESS 마커 사용 확인. 이슈 없음 | 38+15 PASS |
 | 7 | 보안 분석 | 민감 정보, Shell injection, .env 파일. 이슈 없음 | 38+15 PASS |
-| 8 | README/plugin.json | 버전 일관성 (1.5.0), 설치 경로 4/4 정확. 이슈 없음 | 38+15 PASS |
+| 8 | README/plugin.json | 버전 일관성 (3.0.0), 설치 경로 4/4 정확. 이슈 없음 | 38+15 PASS |
 | 9 | 인코딩/포맷 | UTF-8, LF, 후행 개행 전부 정상. 이슈 없음 | 38+15 PASS |
 | 10 | 종합 감사 | 52항목 + 38항목 + 15항목 = **105/105 PASS** | ALL PASS |
 
@@ -175,8 +175,8 @@ PYEOF
 | `name` 필수 (kebab-case) | S4: "name is the only required field" | **PASS** — `"hive"` |
 | `.claude-plugin/plugin.json` 위치 | S4: "Only plugin.json goes inside .claude-plugin/" | **PASS** |
 | skills/ 디렉토리는 플러그인 루트에 위치 | S4: "All other directories must be at the plugin root" | **PASS** |
-| SemVer 버전 형식 | S4: "Follow semantic versioning" | **PASS** — `"1.5.0"` |
-| 매니페스트와 스킬 간 버전 일치 | 일관성 원칙 | **PASS** — 양쪽 모두 1.5.0 |
+| SemVer 버전 형식 | S4: "Follow semantic versioning" | **PASS** — `"3.0.0"` |
+| 매니페스트와 스킬 간 버전 일치 | 일관성 원칙 | **PASS** — 양쪽 모두 3.0.0 |
 
 ### 5-3. Content Structure
 
@@ -231,7 +231,7 @@ PYEOF
 
 | 항목 | 상태 | 설명 |
 |------|------|------|
-| `TeamCreate`/`TeamDelete` in allowed-tools | **주의** | 표준 Claude Code 도구 목록에 없음. body에서 워크플로우 개념으로 사용. 비존재 도구를 allowed-tools에 포함해도 기능적 오류는 없음 (무시됨) |
+| ~~`TeamCreate`/`TeamDelete`~~ | **해소 (v3.0.0)** | v3.0.0에서 allowed-tools에서 제거 완료 |
 | `SendMessage` in allowed-tools | **허용** | Agent 서브에이전트 간 통신 도구로, 에이전트 컨텍스트에서 사용 가능 |
 | `{{VAR}}` custom placeholder | **문서화됨** | hive-spawn-templates/SKILL.md에 공식 변수(`$ARGUMENTS`, `${CLAUDE_SKILL_DIR}`)와의 차이 명시 |
 | Korean body content | **허용** | frontmatter description은 영문 3인칭, body는 한국어. description이 Claude의 스킬 선택 기준이므로 영문이 올바른 선택 |
@@ -290,7 +290,7 @@ PYEOF
 
 | # | 항목 | 현재 상태 | 권장 |
 |---|------|----------|------|
-| 1 | `allowed-tools` 범위 | 17개 도구 나열 | 오케스트레이션에 필수적이나, `TeamCreate`/`TeamDelete` 제거 고려 |
+| 1 | `allowed-tools` 범위 | 23개 도구 나열 | 오케스트레이션에 필수적. v3.0.0에서 비존재 도구 제거 완료 |
 | 2 | `user-invocable` 명시성 | main skill은 absent (기본값 true) | 명시적으로 `user-invocable: true` 추가하면 의도가 더 명확 |
 | 3 | `LEAD DECISION` 마커 테스트 | test_markers.py에서 미검증 | 6종 마커 + LEAD DECISION + HIVE PROGRESS = 8종으로 테스트 확장 |
 | 4 | `context` 필드 활용 | 미사용 | sub-skill을 `context: fork`로 분리 실행하면 context window 절약 가능 |

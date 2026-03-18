@@ -2,7 +2,7 @@
 
 **[English]** | [한국어](README.ko.md) | [日本語](README.ja.md)
 
-> **v2.0.0** — 7-Stage Quality Pipeline with Hard Gate Enforcement
+> **v3.0.0** — 7-Stage Quality Pipeline with Hard Gate Enforcement
 
 Build and orchestrate multi-provider AI teams (Claude/Codex/Gemini) through a research-backed quality pipeline that **enforces identical quality gates for every user**.
 
@@ -14,7 +14,7 @@ Build and orchestrate multi-provider AI teams (Claude/Codex/Gemini) through a re
 
 ---
 
-## Why v2.0.0?
+## Why v3.0.0?
 
 Traditional AI coding workflows suffer from three problems:
 
@@ -22,7 +22,7 @@ Traditional AI coding workflows suffer from three problems:
 2. **Tests pass but code doesn't work** — agents write tests that validate their own assumptions
 3. **No accountability** — single-agent self-review catches nothing
 
-Hive v2.0.0 solves this with:
+Hive v3.0.0 solves this with:
 
 - **Mandatory clarification** (G1+G2) before any work begins
 - **Agent isolation** — test writer cannot see implementation, implementer cannot see test intent (CodeDelegator pattern)
@@ -103,12 +103,12 @@ Do NOT respond or write code based on inference alone when tools are available.
 
 | Skill | Lines | Purpose |
 |-------|-------|---------|
-| `hive` | 161 | Entrypoint — Phase Router, hard gates, provider rules |
-| `hive-workflow` | 499 | Phase 0-5 engine — prompt engineering, brainstorm, Serena, team, execute |
-| `hive-consensus` | 482 | Phase 4 consensus protocol — bidirectional AGREE/COUNTER/CLARIFY |
-| `hive-spawn-templates` | 174 | Provider-specific prompt templates with variable placeholders |
-| `hive-quality-gates` | 210 | G1-G3 gate definitions, marker protocol, hash chain, debate rubric |
-| `hive-tdd-pipeline` | 173 | G4-G7 TDD loop, agent isolation, mutation/PBT/E2E validation |
+| `hive` | 238 | Entrypoint — Phase Router, hard gates, provider rules |
+| `hive-workflow` | 500 | Phase 0-5 engine — prompt engineering, brainstorm, Serena, team, execute |
+| `hive-consensus` | 456 | Phase 4 consensus protocol — bidirectional AGREE/COUNTER/CLARIFY |
+| `hive-spawn-templates` | 181 | Provider-specific prompt templates with variable placeholders |
+| `hive-quality-gates` | 228 | G1-G3 gate definitions, marker protocol, hash chain, debate rubric |
+| `hive-tdd-pipeline` | 175 | G4-G7 TDD loop, agent isolation, mutation/PBT/E2E validation |
 
 ### Scripts
 
@@ -117,8 +117,8 @@ Do NOT respond or write code based on inference alone when tools are available.
 | `validate-plugin.sh` | 54-check structural validation |
 | `validate-standards.sh` | 27-check standards compliance |
 | `validate-gates.sh` | Marker chain + hash integrity verification |
-| `test_markers.py` | 20 marker format pattern validation |
-| `run-tests.sh` | Unified test suite runner (4 test categories) |
+| `test_markers.py` | 21 marker format pattern validation |
+| `run-tests.sh` | Unified test suite runner (5 test categories) |
 
 ### Runtime State
 
@@ -208,7 +208,7 @@ Every agent must reach CONSENSUS on their assigned module before implementation 
 - **COUNTER**: Raise concerns with alternative suggestion (mandatory for technical issues)
 - **CLARIFY**: Request additional information
 
-Max 5 rounds per agent. Gemini mediates ties (2/3 majority). Lead makes final decision if consensus fails after 3 rounds.
+Max 5 rounds per agent. Gemini mediates ties (2/3 majority). Lead makes final decision if consensus fails after 5 rounds.
 
 ## Validation
 
@@ -220,7 +220,7 @@ bash scripts/run-tests.sh
 bash scripts/validate-plugin.sh      # 54 structural checks
 bash scripts/validate-standards.sh   # 27 standard checks
 bash scripts/validate-gates.sh       # Marker chain + hash integrity
-python3 scripts/test_markers.py      # 20 marker format checks
+python3 scripts/test_markers.py      # 21 marker format checks
 ```
 
 ## License

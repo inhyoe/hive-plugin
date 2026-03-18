@@ -1,6 +1,6 @@
 ---
 name: hive-workflow
-description: /hive 스킬의 Phase 0-5 핵심 엔진. Prompt Engineering → Brainstorm → Serena Context → Team Decomposition → Execute.
+description: Core workflow engine for /hive covering Phase 0-3 and 5 (Prompt Engineering, Brainstorm, Serena Context, Team Decomposition, Execute). Phase 4 Consensus is in hive-consensus. Loaded when /hive is invoked.
 user-invocable: false
 ---
 
@@ -84,17 +84,17 @@ Step D: SKILL 매칭
   SessionStart에서 주입된 리소스 목록과 CLAUDE.md Skill Auto-Trigger 테이블을 기반으로:
   1. engineered_prompt.keywords를 각 트리거 시그널과 대조
   2. 매칭되는 스킬 목록 생성
-  예시:
-    키워드 "Stitch + UI + 화면" → stitch-flutter, flutter-widget-decomposition
-    키워드 "새 기능 + 화면 생성" → flutter-feature-scaffold, riverpod-patterns
-    키워드 "버그 수정" → superpowers:systematic-debugging, flutter-error-handling
+  예시 (사용자 환경에 설치된 스킬에 따라 다름):
+    키워드 "UI + 화면" → UI 관련 스킬 매칭
+    키워드 "새 기능" → scaffold/패턴 스킬 매칭
+    키워드 "버그 수정" → debugging/error-handling 스킬 매칭
 Step E: MCP search_skills로 추가 스킬 탐색
   mcp__plugin_prompts_chat_prompts_chat__search_skills(query=핵심 키워드, limit=5)
   → prompts.chat 레지스트리에서 설치 가능한 외부 스킬 확인
   → 이미 로컬에 있는 스킬과 중복 제거
 Step F: PLUGIN/AGENT 매칭
   engineered_prompt.keywords 기반으로:
-  - voltagent 서브에이전트 중 적합한 것 식별 (qa-sec, core-dev, biz)
+  - 사용 가능한 서브에이전트 중 적합한 것 식별
   - superpowers 스킬 중 프로세스 스킬 식별 (brainstorming, TDD, debugging 등)
 ```
 
@@ -102,10 +102,10 @@ Step F: PLUGIN/AGENT 매칭
 
 ```
 resource_map = {
-  "skills_local": ["stitch-flutter", "flutter-widget-decomposition", ...],
+  "skills_local": [매칭된 로컬 스킬 목록],
   "skills_external": [search_skills 결과 중 유용한 것],
-  "process_skills": ["superpowers:brainstorming", "superpowers:TDD", ...],
-  "subagents": ["voltagent-core-dev:frontend-developer", ...],
+  "process_skills": [매칭된 프로세스 스킬 목록],
+  "subagents": [매칭된 서브에이전트 목록],
   "mcp_tools": ["improve_prompt", "search_skills", ...],
   "execution_recommendation": "SUB_AGENT" | "CLAUDE_TEAM" | "SOLO"
 }
@@ -229,9 +229,10 @@ Phase 1 요구사항의 **기능 범위**를 기반으로 Serena MCP를 단계�
 ```
 Step A: 디렉토리 스캔
   mcp__serena-shared__list_dir(".", recursive=false)
-  → 최상위 구조 파악
+  → 최상위 구조 파악 + 소스 루트 자동 식별
 
-  mcp__serena-shared__list_dir("lib", recursive=true)
+  감지된 소스 루트(예: lib/, src/, skills/, app/) 중 요구사항과 관련된 디렉토리:
+  mcp__serena-shared__list_dir("<detected_source_root>", recursive=true)
   → 소스 코드 트리
 
 Step B: 핵심 모듈 심볼 오버뷰
@@ -321,9 +322,9 @@ Step C: 의존성 → 실행 순서 (topological sort)
 |-----------|----------|------|
 | 핵심 로직 / 아키텍처 설계 | **Claude** (Agent tool) | 복잡한 추론, 설계 판단 |
 | 직접 구현 / 리팩터링 | **Codex** (`/ask codex`) | 코드 생성 강점, 구체적 파일 수정 |
-| 사전 리서치 / 체크리스트 | **Gemini** (`/ask gemini`) | Phase 1에서 먼저 호출, 기준 확보 |
-| 테스트 작성 / 문서 | **Gemini** (`/ask gemini`) | 대량 토큰, 반복 작업 |
+| 사전 리서치 / 체크리스트 / 문서 | **Gemini** (`/ask gemini`) | 대량 토큰, 반복 작업 |
 | 간단한 수정 / 설정 | **Claude haiku** (Agent tool) | 빠른 처리, 저비용 |
+| TDD 격리 (Phase 5) | `hive-tdd-pipeline` §1 참조 | Claude=테스트, Codex=구현, Gemini=검증 |
 
 #### 프로바이더 분배 비율 (MANDATORY)
 
@@ -413,14 +414,14 @@ Phase 3의 의존성 그래프 (topological sort) 기반:
   Codex → 아키텍처 사전 리뷰 (결과를 에이전트 지침에 반영)
 Claude 에이전트:
   Agent tool (subagent_type="general-purpose")
-  → team_name 지정, isolation="worktree"
+  → description에 팀 식별자 포함, isolation="worktree"
   → CONSENSUS 문서 + Serena 컨텍스트를 프롬프트에 포함
 Codex 에이전트 (직접 구현 — MANDATORY):
   /ask codex "파일 내용 + 구체적 수정 지시"
   → 수정 대상 심볼의 전체 코드 + 참조 타입/인터페이스 시그니처 + 관련 import 포함
     (토큰 제한 고려 — 전체 파일 대신 관련 섹션 허용)
   → 파일명 + 수정할 함수/클래스 수준의 구체적 지시
-  → flutter analyze 실행 요청 (Codex quick scan)
+  → 정적 분석 실행 요청 (프로젝트 린터/분석기 — Codex quick scan)
   → Async Guardrail 준수 (CCB_ASYNC_SUBMITTED → 턴 종료)
   → round_id/team_id 마커 포함 (예: [HIVE IMPLEMENTATION — T2 — W1])
 Gemini 에이전트:
@@ -432,8 +433,8 @@ Gemini 에이전트:
 CCB async guardrail로 인해 /ask 후 턴 종료되므로, Claude 에이전트를 먼저 스폰해야 한다.
 Codex는 사후 리뷰가 아닌 **병렬 구현자**로 참여한다.
 
-**flutter analyze 하이브리드**: Codex가 quick scan 실행, 리드가 모든 Wave 완료 후
-`flutter analyze --fatal-infos`로 deep scan 실행 (최종 Quality Gate).
+**정적 분석 하이브리드**: Codex가 quick scan 실행, 리드가 모든 Wave 완료 후
+프로젝트에 맞는 정적 분석기로 deep scan 실행 (최종 Quality Gate).
 
 ### 5-3. 결과 수집 및 양방향 피드백 (MANDATORY)
 
@@ -487,7 +488,7 @@ Phase 5 실패 시 **동일 프롬프트 재시도 금지**. 원인 분류 후 �
 
 ### 5-5. 셧다운 + 최종 출력
 
-모든 Wave 완료 후: Claude 에이전트 SendMessage(shutdown), CCB idle_timeout 종료, TeamDelete.
+모든 Wave 완료 후: Claude 에이전트 SendMessage(shutdown), CCB idle_timeout 종료.
 최종 출력: `| 팀 | 상태 | 변경 파일 | 합의 라운드 |` + 총 변경 요약.
 
 ### 5-6. 대시보드 이벤트 발행 + 종료

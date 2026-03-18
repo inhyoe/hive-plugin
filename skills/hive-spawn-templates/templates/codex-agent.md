@@ -87,7 +87,7 @@ Do NOT respond based on inference alone when tools are available.
 
 ### 파일 1: {{FILE_PATH_1}}
 현재 코드:
-\`\`\`dart
+\`\`\`
 {{FILE_1_CONTENT}}
 \`\`\`
 
@@ -97,7 +97,7 @@ Do NOT respond based on inference alone when tools are available.
 
 ### 파일 2: {{FILE_PATH_2}}
 현재 코드:
-\`\`\`dart
+\`\`\`
 {{FILE_2_CONTENT}}
 \`\`\`
 
@@ -107,13 +107,13 @@ Do NOT respond based on inference alone when tools are available.
 ## 규칙
 - CONSENSUS 범위만 구현 (추가 기능 금지)
 - 기존 코드 스타일 준수
-- 수정 후 \`flutter analyze\` 실행해서 결과 알려줘
+- 수정 후 프로젝트에 맞는 정적 분석 실행해서 결과 알려줘
 
 ## 완료 보고 (필수)
 - 변경 파일 목록
 - 각 파일별 핵심 변경 (diff 형태)
 - CONSENSUS 일치 여부 자체 검증
-- flutter analyze 결과
+- 정적 분석 결과
 "
 ```
 
@@ -122,27 +122,27 @@ Do NOT respond based on inference alone when tools are available.
 ```
 /ask codex "[HIVE IMPLEMENTATION — T3 — W1]
 
-lib/presentation/views/login_view.dart 파일을 수정해줘:
+src/components/login-form.tsx 파일을 수정해줘:
 
 현재 코드:
-\`\`\`dart
-class _LoginViewState extends ConsumerState<LoginView> {
-  final _emailController = TextEditingController();
+\`\`\`
+export function LoginForm() {
+  const [email, setEmail] = useState('');
   // ... (파일 전문)
 }
 \`\`\`
 
 수정 사항:
-1. _showForgotPasswordDialog()에서 취소 시 dialogEmailController.dispose() 누락 → 추가
-2. build() 메서드의 Semantics 라벨 누락 → 이메일/비밀번호 필드에 추가
+1. handleSubmit()에서 에러 시 cleanup 누락 → finally 블록 추가
+2. 폼 필드에 aria-label 누락 → 이메일/비밀번호 필드에 추가
 3. 에러 상태에서 실제 에러 메시지 표시 (현재 항상 generic 메시지)
 
-수정 후 flutter analyze 실행해서 결과 알려줘"
+수정 후 프로젝트에 맞는 정적 분석 실행해서 결과 알려줘"
 ```
 
 ### 금지: 추상적 위임
 
 ```
 # 이렇게 하면 안 됨 (파일 내용 없음, 구체적 지시 없음)
-/ask codex "login_view.dart를 개선해줘. 접근성이랑 메모리 누수 수정."
+/ask codex "login-form.tsx를 개선해줘. 접근성이랑 에러 처리 수정."
 ```

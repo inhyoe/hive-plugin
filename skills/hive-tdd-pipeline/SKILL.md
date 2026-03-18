@@ -63,6 +63,7 @@ Non-negotiable.
 - ❌ Layer 2 부재 → PBT 추가 요구
 
 테스트 파일 해시 기록: `Bash("sha256sum tests/* | cut -d' ' -f1")`
+원본 보존: `Bash("cat tests/* > .hive-state/test-content.txt")`
 → `.hive-state/g4-tdd-red.marker`에 저장
 
 ---
@@ -94,6 +95,7 @@ hash(현재테스트) ≠ hash(G4승인테스트) → [TEST TAMPERING DETECTED] 
 워커가 테스트 파일 수정 시 즉시 차단.
 
 구현 코드 해시 기록: `Bash("sha256sum <impl_files> | cut -d' ' -f1")`
+원본 보존: `Bash("cat <impl_files> > .hive-state/impl-content.txt")`
 → `.hive-state/g5-implement.marker`에 저장 (G6 진입 시 검증 대상)
 
 ---
@@ -154,9 +156,9 @@ Do NOT declare work complete unless the conversation contains
 
 ### Type C: Hive 플러그인 특화 검증
 대상: SKILL.md, plugin.json, 마커 포맷
-- validate-plugin.sh → 38 checks PASS
-- validate-standards.sh → 10범주 PASS
-- test_markers.py → 15 checks PASS (마커 포맷 갱신 필요)
+- validate-plugin.sh → ALL checks PASS
+- validate-standards.sh → ALL categories PASS
+- test_markers.py → ALL checks PASS
 - 라인 수 500줄 미만
 
 ### 실패 시

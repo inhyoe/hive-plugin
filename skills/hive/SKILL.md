@@ -2,7 +2,7 @@
 name: hive
 description: Orchestrates multi-provider AI teams (Claude/Codex/Gemini) through Prompt Engineering, Brainstorm, Serena Context, Team Decomposition, Consensus, and Execute phases. Use when decomposing large tasks across multiple AI agents, coordinating multi-agent implementation, or when the user requests team-based orchestration.
 argument-hint: "[task-description]"
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, Agent, TeamCreate, TeamDelete, TaskCreate, TaskUpdate, TaskList, TaskGet, SendMessage, mcp__serena-shared__list_dir, mcp__serena-shared__search_for_pattern, mcp__serena-shared__get_symbols_overview, mcp__serena-shared__find_symbol, mcp__serena-shared__find_referencing_symbols, mcp__serena-shared__read_memory, mcp__serena-shared__list_memories, mcp__plugin_prompts_chat_prompts_chat__improve_prompt, mcp__plugin_prompts_chat_prompts_chat__search_skills, mcp__plugin_prompts_chat_prompts_chat__search_prompts
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, Agent, TaskCreate, TaskUpdate, TaskList, TaskGet, SendMessage, mcp__serena-shared__list_dir, mcp__serena-shared__search_for_pattern, mcp__serena-shared__get_symbols_overview, mcp__serena-shared__find_symbol, mcp__serena-shared__find_referencing_symbols, mcp__plugin_prompts_chat_prompts_chat__improve_prompt, mcp__plugin_prompts_chat_prompts_chat__search_skills, mcp__plugin_prompts_chat_prompts_chat__search_prompts
 ---
 
 # /hive - Multi-Orchestration Team Builder
@@ -45,7 +45,7 @@ AskUserQuestion은 워크플로우 필수 입력입니다 — 권한 승인이 �
 합의 전 구현 금지.
 Phase 4에서 모든 에이전트가 담당 모듈에 대해 CONSENSUS 또는 LEAD DECISION에 도달해야만
 Phase 5 (Execute)로 진행할 수 있습니다.
-LEAD DECISION은 CONSENSUS와 동등한 Phase 4 종료 조건이다 (hive-consensus §7 참조).
+LEAD DECISION은 CONSENSUS와 동등한 Phase 4 종료 조건이다 (hive-consensus §7 "합의 완료 조건" 참조).
 어떤 예외도 없습니다.
 </hard_gate>
 
@@ -84,7 +84,7 @@ Codex에게 구현 위임 시 반드시:
   1. 수정 대상 심볼의 전체 코드 + 참조 타입/인터페이스 시그니처 포함
      (토큰 제한 고려 — 전체 파일 대신 관련 섹션 허용)
   2. 구체적 수정 지시 (파일명 + 함수/클래스 수준)
-  3. `flutter analyze` 실행 요청 (Codex quick scan + 리드 post-Wave deep scan)
+  3. 정적 분석 실행 요청 (프로젝트에 맞는 린터/분석기 사용 — Codex quick scan + 리드 post-Wave deep scan)
 사후 리뷰만 맡기는 것은 이 규칙 위반이다.
 </hard_gate>
 
@@ -203,7 +203,7 @@ Phase 실행 순서 (순차):
 
 ```
 Phase 0: Prompt Engineering & Resource Discovery (프롬프트 엔지니어링 + 리소스 탐색)
-  → ⛔ G1: CLARIFY + G2: SPEC 게이트 선행 필수 (참조: hive-quality-gates §2-3)
+  → ⛔ G1: CLARIFY + G2: SPEC 게이트 선행 필수 (참조: hive-quality-gates §2 "G1: CLARIFY" §3 "G2: SPEC")
   → MCP improve_prompt → 리소스 매칭 → 관련 SKILL/PLUGIN 식별 → ⛔ 엔지니어링 결과 사용자 확인
   → 참조: hive-workflow § Phase 0
 
@@ -220,15 +220,15 @@ Phase 3: Team Decomposition (팀 분해)
   → 참조: hive-workflow § Phase 3
 
 Phase 4: Consensus Loop (합의) ⚠️ 양방향 대화 필수
-  → ⛔ G3: PLAN REVIEW 상호 토론 선행 필수 (참조: hive-quality-gates §4)
-  → TeamCreate → 에이전트 스폰 (TASK PROPOSAL만)
+  → ⛔ G3: PLAN REVIEW 상호 토론 선행 필수 (참조: hive-quality-gates §4 "G3: PLAN REVIEW Gate")
+  → 에이전트 스폰 (TASK PROPOSAL만)
   → 에이전트 응답 수신 → 리드 SendMessage 응답
   → AGREE/COUNTER/CLARIFY 루프 → CONSENSUS 도달
   → ❌ 합의+구현을 하나로 합치기 금지
   → 참조: hive-consensus
 
 Phase 5: Execute & Monitor (실행) ⚠️ TDD Pipeline 필수
-  → G4-G7 TDD Pipeline 강제 (참조: hive-tdd-pipeline)
+  → G4-G7 TDD Pipeline 강제 (참조: hive-tdd-pipeline §2-5 "G4–G7")
   → CONSENSUS 기반 구현 프롬프트 전송 (별도 스폰/메시지)
   → 에이전트 중간 보고 수신 → 리드 피드백
   → 결과 수집 → CONSENSUS 대비 검증 → 통합 → 셧다운

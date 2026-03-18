@@ -103,12 +103,12 @@ Do NOT respond or write code based on inference alone when tools are available.
 
 | 스킬 | 줄 수 | 역할 |
 |------|-------|------|
-| `hive` | 161 | 엔트리포인트 — Phase 라우터, 하드 게이트, 프로바이더 규칙 |
-| `hive-workflow` | 499 | Phase 0-5 엔진 — 프롬프트 엔지니어링, 브레인스톰, Serena, 팀, 실행 |
-| `hive-consensus` | 482 | Phase 4 합의 프로토콜 — 양방향 AGREE/COUNTER/CLARIFY |
-| `hive-spawn-templates` | 174 | 프로바이더별 프롬프트 템플릿 + 변수 플레이스홀더 |
-| `hive-quality-gates` | 210 | G1-G3 게이트 정의, 마커 프로토콜, 해시 체인, 토론 루브릭 |
-| `hive-tdd-pipeline` | 173 | G4-G7 TDD 루프, 에이전트 격리, 뮤테이션/PBT/E2E 검증 |
+| `hive` | 238 | 엔트리포인트 — Phase 라우터, 하드 게이트, 프로바이더 규칙 |
+| `hive-workflow` | 500 | Phase 0-5 엔진 — 프롬프트 엔지니어링, 브레인스톰, Serena, 팀, 실행 |
+| `hive-consensus` | 456 | Phase 4 합의 프로토콜 — 양방향 AGREE/COUNTER/CLARIFY |
+| `hive-spawn-templates` | 181 | 프로바이더별 프롬프트 템플릿 + 변수 플레이스홀더 |
+| `hive-quality-gates` | 228 | G1-G3 게이트 정의, 마커 프로토콜, 해시 체인, 토론 루브릭 |
+| `hive-tdd-pipeline` | 175 | G4-G7 TDD 루프, 에이전트 격리, 뮤테이션/PBT/E2E 검증 |
 
 ### 스크립트
 
@@ -117,8 +117,8 @@ Do NOT respond or write code based on inference alone when tools are available.
 | `validate-plugin.sh` | 54개 구조 검증 |
 | `validate-standards.sh` | 27개 표준 준수 검증 |
 | `validate-gates.sh` | 마커 체인 + 해시 무결성 검증 |
-| `test_markers.py` | 20개 마커 포맷 패턴 검증 |
-| `run-tests.sh` | 통합 테스트 스위트 실행기 (4개 카테고리) |
+| `test_markers.py` | 21개 마커 포맷 패턴 검증 |
+| `run-tests.sh` | 통합 테스트 스위트 실행기 (5개 카테고리) |
 
 ### 런타임 상태
 
@@ -208,7 +208,7 @@ cp -r skills/hive-tdd-pipeline ~/.claude/skills/
 - **COUNTER**: 대안과 함께 기술적 문제 제기 (기술적 문제 발견 시 의무)
 - **CLARIFY**: 추가 정보 요청
 
-에이전트당 최대 5라운드. 교착 시 Gemini가 중재 (2/3 다수결). 3라운드 후 합의 실패 시 리드가 최종 결정.
+에이전트당 최대 5라운드. 교착 시 Gemini가 중재 (2/3 다수결). 5라운드 후 합의 실패 시 리드가 최종 결정.
 
 ## 검증
 
@@ -220,7 +220,7 @@ bash scripts/run-tests.sh
 bash scripts/validate-plugin.sh      # 54개 구조 검증
 bash scripts/validate-standards.sh   # 27개 표준 검증
 bash scripts/validate-gates.sh       # 마커 체인 + 해시 무결성
-python3 scripts/test_markers.py      # 20개 마커 포맷 검증
+python3 scripts/test_markers.py      # 21개 마커 포맷 검증
 ```
 
 ## 라이선스
