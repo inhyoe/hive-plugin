@@ -6,7 +6,7 @@
   },
   "metadata": {
     "description": "Hive multi-agent orchestration plugin with real-time dashboard",
-    "version": "1.0.0"
+    "version": "3.0.0"
   },
   "plugins": [
     {
