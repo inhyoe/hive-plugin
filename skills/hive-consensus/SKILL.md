@@ -144,7 +144,7 @@ IF CLARIFY:
 
 ### CCB 프로바이더 합의 시 주의사항
 
-- 마커 기반 파싱: `[AGREE]`, `[COUNTER]`, `[CLARIFY]` 마커로 응답 유형 식별
+- 마커 기반 파싱: `[AGREE — {팀 ID}]`, `[COUNTER — {팀 ID}]`, `[CLARIFY — {팀 ID}]` 마커로 응답 유형 식별
 - `CCB_DONE` = 응답 완료
 - 마커 없이 응답이 오면 → 전체 내용을 파싱하여 의도 추론
 - CCB Async Guardrail: `CCB_ASYNC_SUBMITTED` → 턴 종료, pend로 나중에 수집
@@ -301,8 +301,10 @@ G3 통과 마커: `[PLAN DEBATE — CONSENSUS — overall:{score≥7.0}]`
 pend로 응답 수집 → 마커 파싱 (round_id/team_id 확인)
   ↓
   AGREE → CONSENSUS 문서 생성 (확인 메시지 불필요 — CCB는 stateless)
-  COUNTER → /ask codex "[FOLLOW-UP — TX — RN] 재제안: ..."
-  CLARIFY → /ask codex "[FOLLOW-UP — TX — RN] 추가 정보: ..."
+  COUNTER → 해당 프로바이더로 재응답 (/ask codex 또는 /ask gemini):
+             "[FOLLOW-UP — TX — RN] 재제안: ..."
+  CLARIFY → 해당 프로바이더로 재응답:
+             "[FOLLOW-UP — TX — RN] 추가 정보: ..."
 ```
 
 **CCB는 stateless**: AGREE 시 별도 "확인" 메시지 불필요 (Claude Agent과 다름).

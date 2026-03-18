@@ -20,7 +20,7 @@ user-invocable: false
 |------|------|---------|
 | 1 | `[CLARIFY PASSED]` | `scope:{파일목록} criteria:{조건} constraints:{제약}` |
 | 2 | `[SPEC APPROVED]` | `hash:{sha256}` |
-| 3 | `[PLAN DEBATE — CONSENSUS]` | `overall:{score}` |
+| 3 | `[PLAN DEBATE — CONSENSUS — overall:{score}]` | |
 | 4 | `[TDD RED PASSED]` | `test_count:{N} fail_count:{N}` |
 | 5 | `[IMPLEMENT GREEN PASSED]` | `pass:{N}/{N} iterations:{M}` |
 | 6 | `[CROSS-VERIFY PASSED]` | `mutation:{%} pbt:{pass/fail} review:{verdict}` |
@@ -60,6 +60,19 @@ Do NOT proceed to G2 (SPEC) unless the conversation contains
 불명확 → 다지선다 질문 (1회 1질문, max 3라운드)
 3라운드 후 불명확 → `[CLARIFY ESCALATED]` + 유저 직접 명세 요청
 
+마커/원문 저장:
+
+```bash
+mkdir -p .hive-state
+cat > .hive-state/clarify-content.txt <<'EOF'
+scope:{...}
+criteria:{...}
+constraints:{...}
+EOF
+printf '%s\n' '[CLARIFY PASSED — scope:{...} criteria:{...} constraints:{...}]' \
+  > .hive-state/g1-clarify.marker
+```
+
 질문 규칙 (ICLR 2025):
 - 반드시 다지선다 (2~4개 선택지)
 - 1회 1질문
@@ -92,7 +105,12 @@ Do NOT proceed to Phase 0 (Prompt Engineering) unless the conversation contains
 해시 계산 (LLM은 SHA256 계산 불가 — 반드시 Bash 도구 사용):
 
 ```bash
-sha256sum <<< '{SPEC내용}' | cut -d' ' -f1
+mkdir -p .hive-state
+cat > .hive-state/spec-content.txt <<'EOF'
+{SPEC내용}
+EOF
+sha256sum .hive-state/spec-content.txt | cut -d' ' -f1
+printf '%s\n' '[SPEC APPROVED — hash:{sha256}]' > .hive-state/g2-spec.marker
 ```
 
 불변식 → G4에서 Property-Based Test로 직접 변환.

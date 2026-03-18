@@ -22,7 +22,7 @@
     </prior_consensus>
   </context>
 
-  <task_proposal>
+  <task_proposal marker="[TASK PROPOSAL — {{TEAM_ID}} — R{{ROUND_NUM}}]">
     {{TASK_PROPOSAL}}
   </task_proposal>
 
@@ -54,7 +54,7 @@
     - 장기적 기술 부채를 만들 때
     - 요구사항과 불일치할 때
 
-    응답 형식은 반드시 [AGREE], [COUNTER], [CLARIFY] 마커로 시작하세요.
+    응답 형식은 반드시 [AGREE — {{TEAM_ID}}], [COUNTER — {{TEAM_ID}}], [CLARIFY — {{TEAM_ID}}] 마커로 시작하세요.
     참조: hive-consensus § 2-3
   </instructions>
 </agent_prompt>
