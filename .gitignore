@@ -16,3 +16,6 @@ node_modules/
 
 # Sisyphus work directory
 .sisyphus/
+
+# Git worktrees
+.worktrees/
