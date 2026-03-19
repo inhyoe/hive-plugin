@@ -1,0 +1,60 @@
+import { readSession } from '../lib/state.js';
+import { phaseIndex } from '../lib/phases.js';
+import { isDirectMarkerCreation, isCreateMarkerCall, extractCreateMarkerGate, isGitCommit, } from '../lib/patterns.js';
+// Maps gate argument (lowercase) to the Phase it completes
+const GATE_TO_PHASE = {
+    g1: 'G1',
+    g2: 'G2',
+    p0: 'P0',
+    p1: 'P1',
+    p2: 'P2',
+    p3: 'P3',
+    g3: 'G3',
+    p4: 'P4',
+    p5: 'P5',
+};
+export function handlePhaseGuard(command, stateDir) {
+    const session = readSession(stateDir);
+    // IDLE: no session → pass through everything
+    if (!session || session.mode !== 'HIVE') {
+        return { exitCode: 0 };
+    }
+    // Step 1: Block direct marker creation (forgery)
+    if (isDirectMarkerCreation(command)) {
+        return {
+            exitCode: 2,
+            message: 'BLOCKED: Direct marker creation detected (forgery attempt). Use scripts/create-marker.sh instead.',
+        };
+    }
+    // Step 2: Validate create-marker.sh gate order
+    if (isCreateMarkerCall(command)) {
+        const gate = extractCreateMarkerGate(command);
+        if (gate) {
+            const gatePhase = GATE_TO_PHASE[gate.toLowerCase()];
+            if (!gatePhase) {
+                return { exitCode: 2, message: `BLOCKED: Unknown gate "${gate}".` };
+            }
+            const currentIdx = phaseIndex(session.phase);
+            const gateIdx = phaseIndex(gatePhase);
+            // Gate must match current phase (completing current phase to advance)
+            if (gateIdx !== currentIdx) {
+                return {
+                    exitCode: 2,
+                    message: `BLOCKED: Phase order violation. Current phase: ${session.phase}, attempted gate: ${gate.toUpperCase()}. Cannot skip or go backward.`,
+                };
+            }
+        }
+        return { exitCode: 0 };
+    }
+    // Step 3: Block git commit before P5
+    if (isGitCommit(command)) {
+        if (session.phase !== 'P5') {
+            return {
+                exitCode: 2,
+                message: `BLOCKED: git commit not allowed until P5. Current phase: ${session.phase}.`,
+            };
+        }
+    }
+    return { exitCode: 0 };
+}
+//# sourceMappingURL=phase-guard.js.map
