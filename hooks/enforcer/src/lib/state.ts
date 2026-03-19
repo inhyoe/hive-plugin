@@ -11,12 +11,17 @@ export interface AgentSpawn {
 }
 
 export interface HiveSession {
-  mode: 'HIVE' | 'IDLE';
+  mode: 'HIVE' | 'IDLE' | 'DONE';
   phase: Phase;
   completedGates: Phase[];
   agentSpawns: AgentSpawn[];
   startedAt: string;
 }
+
+export type SessionReadResult =
+  | { status: 'ok'; session: HiveSession }
+  | { status: 'not_found' }
+  | { status: 'parse_error'; error: string };
 
 const SESSION_FILE = 'session.json';
 
@@ -24,11 +29,16 @@ function sessionPath(stateDir: string): string {
   return join(stateDir, SESSION_FILE);
 }
 
-export function readSession(stateDir: string): HiveSession | null {
+export function readSession(stateDir: string): SessionReadResult {
   const filePath = sessionPath(stateDir);
-  if (!existsSync(filePath)) return null;
-  const raw = readFileSync(filePath, 'utf-8');
-  return JSON.parse(raw) as HiveSession;
+  if (!existsSync(filePath)) return { status: 'not_found' };
+  try {
+    const raw = readFileSync(filePath, 'utf-8');
+    return { status: 'ok', session: JSON.parse(raw) as HiveSession };
+  } catch (err) {
+    console.error(`WARNING: Corrupted session at ${filePath}:`, err);
+    return { status: 'parse_error', error: String(err) };
+  }
 }
 
 export function writeSession(stateDir: string, session: HiveSession): void {
@@ -51,8 +61,9 @@ export function createSession(stateDir: string): HiveSession {
 }
 
 export function advancePhase(stateDir: string): HiveSession {
-  const session = readSession(stateDir);
-  if (!session) throw new Error('No active session');
+  const result = readSession(stateDir);
+  if (result.status !== 'ok') throw new Error(`No active session (${result.status})`);
+  const session = result.session;
 
   const next = getNextPhase(session.phase);
   if (!next) throw new Error(`Cannot advance past ${session.phase}`);
@@ -64,8 +75,9 @@ export function advancePhase(stateDir: string): HiveSession {
 }
 
 export function addAgentSpawn(stateDir: string, spawn: AgentSpawn): HiveSession {
-  const session = readSession(stateDir);
-  if (!session) throw new Error('No active session');
+  const result = readSession(stateDir);
+  if (result.status !== 'ok') throw new Error(`No active session (${result.status})`);
+  const session = result.session;
 
   session.agentSpawns.push(spawn);
   writeSession(stateDir, session);

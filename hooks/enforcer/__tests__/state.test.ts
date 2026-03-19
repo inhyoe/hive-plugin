@@ -23,15 +23,17 @@ describe('Session state manager', () => {
   });
 
   describe('readSession', () => {
-    it('returns null when no session file exists', () => {
-      expect(readSession(stateDir)).toBeNull();
+    it('returns not_found when no session file exists', () => {
+      expect(readSession(stateDir).status).toBe('not_found');
     });
 
     it('returns parsed session when file exists', () => {
-      const session = createSession(stateDir);
-      const read = readSession(stateDir);
-      expect(read).not.toBeNull();
-      expect(read!.mode).toBe('HIVE');
+      createSession(stateDir);
+      const result = readSession(stateDir);
+      expect(result.status).toBe('ok');
+      if (result.status === 'ok') {
+        expect(result.session.mode).toBe('HIVE');
+      }
     });
   });
 
@@ -56,8 +58,11 @@ describe('Session state manager', () => {
       const session = createSession(stateDir);
       session.phase = 'G2';
       writeSession(stateDir, session);
-      const read = readSession(stateDir);
-      expect(read!.phase).toBe('G2');
+      const result = readSession(stateDir);
+      expect(result.status).toBe('ok');
+      if (result.status === 'ok') {
+        expect(result.session.phase).toBe('G2');
+      }
     });
   });
 

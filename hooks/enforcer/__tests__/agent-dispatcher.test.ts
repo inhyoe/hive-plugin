@@ -29,7 +29,6 @@ describe('Agent Dispatcher handler', () => {
 
   describe('P0 — Research only', () => {
     it('allows Explore agent', () => {
-      createSession(stateDir);
       const s = createSession(stateDir);
       s.phase = 'P0';
       writeSession(stateDir, s);

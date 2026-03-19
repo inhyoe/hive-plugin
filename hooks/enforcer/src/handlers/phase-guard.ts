@@ -26,10 +26,21 @@ const GATE_TO_PHASE: Record<string, Phase> = {
 };
 
 export function handlePhaseGuard(command: string, stateDir: string): HandlerResult {
-  const session = readSession(stateDir);
+  const result = readSession(stateDir);
 
-  // IDLE: no session → pass through everything
-  if (!session || session.mode !== 'HIVE') {
+  // No session file → IDLE → pass through
+  if (result.status === 'not_found') return { exitCode: 0 };
+
+  // Corrupted session → fail closed (security-critical)
+  if (result.status === 'parse_error') {
+    return {
+      exitCode: 2,
+      message: `BLOCKED: session.json corrupted (${result.error}). Delete .hive-state/session.json to proceed.`,
+    };
+  }
+
+  const session = result.session;
+  if (session.mode !== 'HIVE') {
     return { exitCode: 0 };
   }
 

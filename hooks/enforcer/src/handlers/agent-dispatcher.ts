@@ -41,10 +41,15 @@ const PHASE_PROFILES: Partial<Record<Phase, PhaseProfile>> = {
 const TEAM_ID_RE = /team[_-]?\w+/i;
 
 export function handleAgentDispatcher(input: AgentInput, stateDir: string): HandlerResult {
-  const session = readSession(stateDir);
+  const result = readSession(stateDir);
 
-  // IDLE: no session → pass through
-  if (!session || session.mode !== 'HIVE') {
+  // No session or corrupted → pass through (advisory handler)
+  if (result.status !== 'ok') {
+    return { exitCode: 0 };
+  }
+
+  const session = result.session;
+  if (session.mode !== 'HIVE') {
     return { exitCode: 0 };
   }
 

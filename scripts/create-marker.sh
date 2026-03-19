@@ -8,6 +8,11 @@
 # =============================================================================
 set -euo pipefail
 
+if ((BASH_VERSINFO[0] < 4)); then
+  echo "ERROR: Bash 4+ required (found ${BASH_VERSION}). Install via: brew install bash" >&2
+  exit 1
+fi
+
 STATE_DIR="${HIVE_STATE_DIR:-.hive-state}"
 SESSION_FILE="${STATE_DIR}/session.json"
 
@@ -19,10 +24,18 @@ EVIDENCE_FILE=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --team-id)
+      if [[ -z "${2:-}" ]] || [[ "$2" == --* ]]; then
+        echo "ERROR: --team-id requires a value" >&2
+        exit 1
+      fi
       TEAM_ID="$2"
       shift 2
       ;;
     --evidence-file)
+      if [[ -z "${2:-}" ]] || [[ "$2" == --* ]]; then
+        echo "ERROR: --evidence-file requires a value" >&2
+        exit 1
+      fi
       EVIDENCE_FILE="$2"
       shift 2
       ;;
@@ -74,7 +87,14 @@ if ! command -v jq &>/dev/null; then
 fi
 
 CURRENT_PHASE=$(jq -r '.phase' "$SESSION_FILE")
+CURRENT_MODE=$(jq -r '.mode' "$SESSION_FILE")
 GATE_UPPER="${GATE_LOWER^^}"
+
+# Validate session is in HIVE mode
+if [[ "$CURRENT_MODE" != "HIVE" ]]; then
+  echo "ERROR: Session not in HIVE mode (current: ${CURRENT_MODE}). Marker creation blocked." >&2
+  exit 1
+fi
 
 # Validate current phase matches gate
 if [[ "$CURRENT_PHASE" != "$GATE_UPPER" ]]; then
@@ -84,14 +104,16 @@ fi
 
 # ── Consensus gates require evidence ──
 if [[ "$GATE_LOWER" == "p4" ]]; then
-  # Run validate-phase5-entry.sh if available
+  # Run validate-phase5-entry.sh (mandatory for P4→P5 transition)
   VALIDATE_SCRIPT="scripts/validate-phase5-entry.sh"
-  if [[ -x "$VALIDATE_SCRIPT" ]]; then
-    echo "Running Phase 5 entry validation..."
-    if ! bash "$VALIDATE_SCRIPT"; then
-      echo "ERROR: Phase 5 entry validation failed" >&2
-      exit 1
-    fi
+  if [[ ! -f "$VALIDATE_SCRIPT" ]]; then
+    echo "ERROR: ${VALIDATE_SCRIPT} not found. Phase 5 entry validation is mandatory." >&2
+    exit 1
+  fi
+  echo "Running Phase 5 entry validation..."
+  if ! bash "$VALIDATE_SCRIPT"; then
+    echo "ERROR: Phase 5 entry validation failed" >&2
+    exit 1
   fi
 fi
 

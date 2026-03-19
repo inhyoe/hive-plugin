@@ -32,9 +32,12 @@ describe('Agent Tracker handler', () => {
       subagentType: 'Explore',
       description: 'explore',
     }, stateDir);
-    const session = readSession(stateDir);
-    expect(session!.agentSpawns).toHaveLength(1);
-    expect(session!.agentSpawns[0].type).toBe('Explore');
+    const result = readSession(stateDir);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.session.agentSpawns).toHaveLength(1);
+      expect(result.session.agentSpawns[0].type).toBe('Explore');
+    }
   });
 
   it('saves conversation log at P4', () => {
@@ -78,8 +81,11 @@ describe('Agent Tracker handler', () => {
       description: 'consensus',
     }, stateDir);
 
-    const session = readSession(stateDir);
-    expect(session!.agentSpawns[0].teamId).toBe('team-alpha');
+    const result = readSession(stateDir);
+    expect(result.status).toBe('ok');
+    if (result.status === 'ok') {
+      expect(result.session.agentSpawns[0].teamId).toBe('team-alpha');
+    }
   });
 
   it('always exits 0', () => {

@@ -5,7 +5,9 @@ const TEE_MARKER_RE = /tee\s+.*\.marker/i;
 const CREATE_MARKER_RE = /(?:bash\s+)?(?:\.\/)?scripts\/create-marker\.sh/;
 
 export function isDirectMarkerCreation(command: string): boolean {
-  if (CREATE_MARKER_RE.test(command)) return false;
+  // Only exempt pure create-marker.sh calls (no compound shell operators)
+  if (CREATE_MARKER_RE.test(command) && !/[;&|]/.test(command)) return false;
+  // Check for any marker write pattern in the full command
   return MARKER_WRITE_RE.test(command) || HEREDOC_MARKER_RE.test(command) || TEE_MARKER_RE.test(command);
 }
 

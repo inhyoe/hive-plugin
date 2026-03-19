@@ -84,6 +84,11 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  console.error('Fatal error (non-blocking):', err);
-  process.exit(0); // Never block Claude on fatal errors
+  const handler = process.argv[2];
+  console.error(`Fatal error in ${handler}:`, err);
+  // Security-critical handlers fail closed; advisory handlers fail open
+  if (handler === 'phase-guard') {
+    process.exit(2);
+  }
+  process.exit(0);
 });

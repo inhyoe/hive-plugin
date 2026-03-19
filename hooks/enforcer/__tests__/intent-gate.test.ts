@@ -19,23 +19,24 @@ describe('Intent Gate handler', () => {
   it('creates session on /hive command', () => {
     const result = handleIntentGate('/hive implement feature X', stateDir);
     expect(result.exitCode).toBe(0);
-    const session = readSession(stateDir);
-    expect(session).not.toBeNull();
-    expect(session!.mode).toBe('HIVE');
-    expect(session!.phase).toBe('G1');
+    const sr = readSession(stateDir);
+    expect(sr.status).toBe('ok');
+    if (sr.status === 'ok') {
+      expect(sr.session.mode).toBe('HIVE');
+      expect(sr.session.phase).toBe('G1');
+    }
   });
 
   it('creates session on /hive with no args', () => {
     const result = handleIntentGate('/hive', stateDir);
     expect(result.exitCode).toBe(0);
-    const session = readSession(stateDir);
-    expect(session).not.toBeNull();
+    expect(readSession(stateDir).status).toBe('ok');
   });
 
   it('ignores non-hive prompts', () => {
     const result = handleIntentGate('just a normal question', stateDir);
     expect(result.exitCode).toBe(0);
-    expect(readSession(stateDir)).toBeNull();
+    expect(readSession(stateDir).status).toBe('not_found');
   });
 
   it('warns on duplicate /hive when session exists', () => {

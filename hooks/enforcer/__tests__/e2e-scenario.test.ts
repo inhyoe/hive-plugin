@@ -6,7 +6,12 @@ import { handleIntentGate } from '../src/handlers/intent-gate.js';
 import { handlePhaseGuard } from '../src/handlers/phase-guard.js';
 import { handleAgentDispatcher } from '../src/handlers/agent-dispatcher.js';
 import { handleAgentTracker } from '../src/handlers/agent-tracker.js';
-import { readSession, writeSession } from '../src/lib/state.js';
+import { readSession, writeSession, HiveSession } from '../src/lib/state.js';
+
+function getSession(stateDir: string): HiveSession | null {
+  const r = readSession(stateDir);
+  return r.status === 'ok' ? r.session : null;
+}
 
 describe('E2E scenario: full lifecycle', () => {
   let stateDir: string;
@@ -20,9 +25,10 @@ describe('E2E scenario: full lifecycle', () => {
   });
 
   it('IDLE → /hive → G1 session', () => {
-    expect(readSession(stateDir)).toBeNull();
+    expect(readSession(stateDir).status).toBe('not_found');
     handleIntentGate('/hive implement auth', stateDir);
-    const session = readSession(stateDir);
+    const session = getSession(stateDir);
+    expect(session).not.toBeNull();
     expect(session!.mode).toBe('HIVE');
     expect(session!.phase).toBe('G1');
   });
@@ -49,8 +55,7 @@ describe('E2E scenario: full lifecycle', () => {
 
   it('blocks git commit before P5', () => {
     handleIntentGate('/hive test', stateDir);
-    // Advance to P3
-    const session = readSession(stateDir)!;
+    const session = getSession(stateDir)!;
     session.phase = 'P3';
     writeSession(stateDir, session);
 
@@ -61,7 +66,7 @@ describe('E2E scenario: full lifecycle', () => {
 
   it('allows git commit at P5', () => {
     handleIntentGate('/hive test', stateDir);
-    const session = readSession(stateDir)!;
+    const session = getSession(stateDir)!;
     session.phase = 'P5';
     writeSession(stateDir, session);
 
@@ -71,7 +76,7 @@ describe('E2E scenario: full lifecycle', () => {
 
   it('warns about non-consensus agent at P4', () => {
     handleIntentGate('/hive test', stateDir);
-    const session = readSession(stateDir)!;
+    const session = getSession(stateDir)!;
     session.phase = 'P4';
     writeSession(stateDir, session);
 
@@ -86,7 +91,7 @@ describe('E2E scenario: full lifecycle', () => {
 
   it('tracks agent spawns with team ID', () => {
     handleIntentGate('/hive test', stateDir);
-    const session = readSession(stateDir)!;
+    const session = getSession(stateDir)!;
     session.phase = 'P4';
     writeSession(stateDir, session);
 
@@ -96,7 +101,7 @@ describe('E2E scenario: full lifecycle', () => {
       description: 'consensus team-alpha',
     }, stateDir);
 
-    const updated = readSession(stateDir)!;
+    const updated = getSession(stateDir)!;
     expect(updated.agentSpawns).toHaveLength(1);
     expect(updated.agentSpawns[0].teamId).toBe('team-alpha');
     expect(existsSync(join(stateDir, 'conversations'))).toBe(true);
@@ -104,7 +109,7 @@ describe('E2E scenario: full lifecycle', () => {
 
   it('P5 implementation agent tracked and allowed', () => {
     handleIntentGate('/hive test', stateDir);
-    const session = readSession(stateDir)!;
+    const session = getSession(stateDir)!;
     session.phase = 'P5';
     writeSession(stateDir, session);
 

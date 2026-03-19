@@ -21,9 +21,15 @@ function extractTeamId(text: string): string | undefined {
 }
 
 export function handleAgentTracker(input: AgentInput, stateDir: string): HandlerResult {
-  const session = readSession(stateDir);
+  const result = readSession(stateDir);
 
-  if (!session || session.mode !== 'HIVE') {
+  // No session or corrupted → pass through (advisory handler)
+  if (result.status !== 'ok') {
+    return { exitCode: 0 };
+  }
+
+  const session = result.session;
+  if (session.mode !== 'HIVE') {
     return { exitCode: 0 };
   }
 
