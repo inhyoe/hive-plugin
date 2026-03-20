@@ -113,12 +113,22 @@ safe_symlink() {
 
   # If it's a real directory (not a symlink), back it up
   if [[ -d "$link_path" && ! -L "$link_path" ]]; then
-    info "Backing up existing directory: $link_path -> ${link_path}.bak"
-    mv "$link_path" "${link_path}.bak"
+    local bak="${link_path}.bak"
+    # Avoid collision with existing .bak
+    if [[ -e "$bak" ]]; then
+      bak="${link_path}.bak.$(date +%Y%m%d%H%M%S)"
+    fi
+    info "Backing up existing directory: $link_path -> $bak"
+    mv "$link_path" "$bak"
   fi
 
-  # If it's an existing symlink, remove it
+  # If it's an existing symlink, warn if it points elsewhere, then replace
   if [[ -L "$link_path" ]]; then
+    local current_target
+    current_target="$(readlink -f "$link_path" 2>/dev/null || true)"
+    if [[ "$current_target" != "$target" && "$current_target" != "$(readlink -f "$target" 2>/dev/null)" ]]; then
+      info "WARNING: Replacing existing symlink $link_path (was -> $current_target)"
+    fi
     rm "$link_path"
   fi
 
@@ -234,7 +244,9 @@ install_dashboard_deps() {
 ###############################################################################
 
 # Merge plugin hooks into settings.json, preserving existing user hooks.
-# Idempotent: skips hooks whose command already contains the repo path.
+# Idempotent: identifies plugin hooks by _tag field, not command content.
+HIVE_HOOK_TAG="hive-plugin"
+
 install_hooks() {
   local settings="$CLAUDE_HOME/settings.json"
 
@@ -263,43 +275,39 @@ install_hooks() {
   event_types="$(echo "$plugin_hooks" | jq -r '.hooks | keys[]')"
 
   for event_type in $event_types; do
-    # Get plugin entries for this event type
-    local plugin_entries
-    plugin_entries="$(echo "$plugin_hooks" | jq -c ".hooks[\"$event_type\"][]")"
-
     # Ensure the event type array exists in current settings
     current_settings="$(echo "$current_settings" | jq \
       --arg et "$event_type" \
       'if .hooks[$et] == null then .hooks[$et] = [] else . end')"
 
-    # For each plugin entry, check if it already exists (by repo path in command)
-    while IFS= read -r entry; do
-      # Check if any hook in current settings for this event type has a command containing REPO_ROOT
-      local already_exists
-      already_exists="$(echo "$current_settings" | jq \
-        --arg et "$event_type" \
-        --arg repo "$REPO_ROOT" \
-        '[.hooks[$et][] | select(.hooks[]?.command | contains($repo))] | length')"
+    # Remove any existing hive-plugin tagged entries (clean re-install)
+    current_settings="$(echo "$current_settings" | jq \
+      --arg et "$event_type" \
+      --arg tag "$HIVE_HOOK_TAG" \
+      '.hooks[$et] = [.hooks[$et][] | select(._tag != $tag)]')"
 
-      if [[ "$already_exists" -eq 0 ]]; then
-        # Add the entry
-        current_settings="$(echo "$current_settings" | jq \
-          --arg et "$event_type" \
-          --argjson entry "$entry" \
-          '.hooks[$et] += [$entry]')"
-        info "Added $event_type hook"
-      else
-        info "$event_type hook already exists, skipping"
-      fi
+    # Get plugin entries for this event type, inject _tag for identification
+    local plugin_entries
+    plugin_entries="$(echo "$plugin_hooks" | jq -c \
+      --arg tag "$HIVE_HOOK_TAG" \
+      ".hooks[\"$event_type\"][] | . + {\"_tag\": \$tag}")"
+
+    # Add each tagged entry
+    while IFS= read -r entry; do
+      current_settings="$(echo "$current_settings" | jq \
+        --arg et "$event_type" \
+        --argjson entry "$entry" \
+        '.hooks[$et] += [$entry]')"
     done <<< "$plugin_entries"
+    info "Added $event_type hook"
   done
 
   echo "$current_settings" | jq '.' > "$settings"
   info "Hooks merged into $settings"
 }
 
-# Remove plugin hooks from settings.json (entries whose command contains REPO_ROOT).
-# Preserves user hooks. Removes empty event type arrays.
+# Remove plugin hooks from settings.json (entries with _tag == "hive-plugin").
+# Preserves all user hooks. Removes empty event type arrays.
 uninstall_hooks() {
   local settings="$CLAUDE_HOME/settings.json"
 
@@ -320,11 +328,11 @@ uninstall_hooks() {
   event_types="$(echo "$current_settings" | jq -r '.hooks // {} | keys[]' 2>/dev/null || true)"
 
   for event_type in $event_types; do
-    # Filter out entries whose any hook command contains REPO_ROOT
+    # Filter out entries tagged as hive-plugin
     current_settings="$(echo "$current_settings" | jq \
       --arg et "$event_type" \
-      --arg repo "$REPO_ROOT" \
-      '.hooks[$et] = [.hooks[$et][] | select((.hooks[]?.command | contains($repo)) | not)]')"
+      --arg tag "$HIVE_HOOK_TAG" \
+      '.hooks[$et] = [.hooks[$et][] | select(._tag != $tag)]')"
   done
 
   # Remove event types that became empty arrays
