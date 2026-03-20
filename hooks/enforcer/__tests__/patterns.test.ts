@@ -31,8 +31,46 @@ describe('Pattern matching', () => {
       expect(isDirectMarkerCreation('bash scripts/create-marker.sh g1')).toBe(false);
     });
 
-    it('allows cat reading a marker (no redirect)', () => {
-      expect(isDirectMarkerCreation('cat .hive-state/g1.marker')).toBe(false);
+    it('blocks touch on .marker file', () => {
+      expect(isDirectMarkerCreation('touch .hive-state/g1.marker')).toBe(true);
+    });
+
+    it('blocks cp to .marker file', () => {
+      expect(isDirectMarkerCreation('cp /tmp/fake .hive-state/g2.marker')).toBe(true);
+    });
+
+    it('blocks dd to .marker file', () => {
+      expect(isDirectMarkerCreation('dd if=/dev/zero of=.hive-state/p0.marker')).toBe(true);
+    });
+
+    it('blocks mv to .marker file', () => {
+      expect(isDirectMarkerCreation('mv /tmp/x .hive-state/g1.marker')).toBe(true);
+    });
+
+    it('allows cat reading a marker (standalone create-marker.sh reference)', () => {
+      // cat without redirect doesn't match — but the whitelist approach means
+      // any .marker reference NOT from create-marker.sh is blocked
+      expect(isDirectMarkerCreation('cat .hive-state/g1.marker')).toBe(true);
+    });
+
+    it('blocks create-marker.sh with subshell injection', () => {
+      expect(isDirectMarkerCreation('scripts/create-marker.sh $(touch .hive-state/fake.marker)')).toBe(true);
+    });
+
+    it('blocks create-marker.sh with backtick injection', () => {
+      expect(isDirectMarkerCreation('scripts/create-marker.sh `touch .hive-state/g1.marker`')).toBe(true);
+    });
+
+    it('blocks create-marker.sh with newline-appended command', () => {
+      expect(isDirectMarkerCreation('scripts/create-marker.sh g1\ntouch .hive-state/fake.marker')).toBe(true);
+    });
+
+    it('blocks create-marker.sh with stdout redirect to forge marker', () => {
+      expect(isDirectMarkerCreation('scripts/create-marker.sh g1 > .hive-state/p5.marker')).toBe(true);
+    });
+
+    it('blocks create-marker.sh with append redirect to forge marker', () => {
+      expect(isDirectMarkerCreation('bash scripts/create-marker.sh g1 >> .hive-state/p5.marker')).toBe(true);
     });
 
     it('ignores unrelated commands', () => {
@@ -99,6 +137,18 @@ describe('Pattern matching', () => {
     it('returns null for missing tool_input', () => {
       expect(extractCommandFromStdin(JSON.stringify({ other: 'data' }))).toBeNull();
     });
+
+    it('returns null when command is a number', () => {
+      expect(extractCommandFromStdin(JSON.stringify({ tool_input: { command: 42 } }))).toBeNull();
+    });
+
+    it('returns null when command is an array', () => {
+      expect(extractCommandFromStdin(JSON.stringify({ tool_input: { command: ['ls'] } }))).toBeNull();
+    });
+
+    it('returns null when command is an object', () => {
+      expect(extractCommandFromStdin(JSON.stringify({ tool_input: { command: { cmd: 'ls' } } }))).toBeNull();
+    });
   });
 
   describe('extractPromptFromStdin', () => {
@@ -109,6 +159,14 @@ describe('Pattern matching', () => {
 
     it('returns null for missing prompt', () => {
       expect(extractPromptFromStdin(JSON.stringify({}))).toBeNull();
+    });
+
+    it('returns null when prompt is a number', () => {
+      expect(extractPromptFromStdin(JSON.stringify({ prompt: 123 }))).toBeNull();
+    });
+
+    it('returns null when prompt is an array', () => {
+      expect(extractPromptFromStdin(JSON.stringify({ prompt: ['hello'] }))).toBeNull();
     });
   });
 
@@ -130,6 +188,23 @@ describe('Pattern matching', () => {
 
     it('returns null for non-agent stdin', () => {
       expect(extractAgentInfoFromStdin(JSON.stringify({ tool_input: { command: 'ls' } }))).toBeNull();
+    });
+
+    it('returns null when prompt is a number', () => {
+      const stdin = JSON.stringify({ tool_input: { prompt: 42, subagent_type: 'Explore' } });
+      expect(extractAgentInfoFromStdin(stdin)).toBeNull();
+    });
+
+    it('returns null when subagent_type is an object', () => {
+      const stdin = JSON.stringify({ tool_input: { prompt: 'test', subagent_type: { type: 'Explore' } } });
+      expect(extractAgentInfoFromStdin(stdin)).toBeNull();
+    });
+
+    it('uses empty string when description is non-string', () => {
+      const stdin = JSON.stringify({ tool_input: { prompt: 'test', subagent_type: 'Explore', description: 999 } });
+      const info = extractAgentInfoFromStdin(stdin);
+      expect(info).not.toBeNull();
+      expect(info!.description).toBe('');
     });
   });
 });

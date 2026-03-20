@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, rmSync, existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
@@ -63,6 +63,24 @@ describe('Session state manager', () => {
       if (result.status === 'ok') {
         expect(result.session.phase).toBe('G2');
       }
+    });
+
+    it('leaves no .tmp files after write (B3: atomic write)', () => {
+      const session = createSession(stateDir);
+      session.phase = 'G2';
+      writeSession(stateDir, session);
+      const files = readdirSync(stateDir);
+      const tmpFiles = files.filter(f => f.endsWith('.tmp'));
+      expect(tmpFiles).toEqual([]);
+    });
+
+    it('writes valid JSON (B3: atomic write)', () => {
+      const session = createSession(stateDir);
+      session.phase = 'P3';
+      writeSession(stateDir, session);
+      const raw = readFileSync(join(stateDir, 'session.json'), 'utf-8');
+      const parsed = JSON.parse(raw);
+      expect(parsed.phase).toBe('P3');
     });
   });
 

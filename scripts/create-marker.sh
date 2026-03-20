@@ -8,7 +8,7 @@
 # =============================================================================
 set -euo pipefail
 
-if ((BASH_VERSINFO[0] < 4)); then
+if [ "${BASH_VERSINFO[0]}" -lt 4 ]; then
   echo "ERROR: Bash 4+ required (found ${BASH_VERSION}). Install via: brew install bash" >&2
   exit 1
 fi
@@ -42,6 +42,9 @@ while [[ $# -gt 0 ]]; do
     *)
       if [[ -z "$GATE" ]]; then
         GATE="$1"
+      else
+        echo "ERROR: Unexpected argument '$1' (gate already set to '${GATE}')" >&2
+        exit 1
       fi
       shift
       ;;
@@ -144,13 +147,23 @@ NEXT_PHASE="${GATE_NEXT_PHASE[$GATE_LOWER]}"
 
 if [[ "$NEXT_PHASE" == "DONE" ]]; then
   # Mark session as completed
-  jq --arg gate "$GATE_UPPER" \
-     '.completedGates += [$gate] | .mode = "DONE"' \
-     "$SESSION_FILE" > "${SESSION_FILE}.tmp" && mv "${SESSION_FILE}.tmp" "$SESSION_FILE"
+  if ! jq --arg gate "$GATE_UPPER" \
+       '.completedGates += [$gate] | .mode = "DONE"' \
+       "$SESSION_FILE" > "${SESSION_FILE}.tmp"; then
+    rm -f "${SESSION_FILE}.tmp"
+    echo "ERROR: Failed to update session.json" >&2
+    exit 1
+  fi
+  mv "${SESSION_FILE}.tmp" "$SESSION_FILE"
 else
-  jq --arg gate "$GATE_UPPER" --arg next "$NEXT_PHASE" \
-     '.completedGates += [$gate] | .phase = $next' \
-     "$SESSION_FILE" > "${SESSION_FILE}.tmp" && mv "${SESSION_FILE}.tmp" "$SESSION_FILE"
+  if ! jq --arg gate "$GATE_UPPER" --arg next "$NEXT_PHASE" \
+       '.completedGates += [$gate] | .phase = $next' \
+       "$SESSION_FILE" > "${SESSION_FILE}.tmp"; then
+    rm -f "${SESSION_FILE}.tmp"
+    echo "ERROR: Failed to update session.json" >&2
+    exit 1
+  fi
+  mv "${SESSION_FILE}.tmp" "$SESSION_FILE"
 fi
 
 echo "✓ Session advanced: ${GATE_UPPER} → ${NEXT_PHASE}"

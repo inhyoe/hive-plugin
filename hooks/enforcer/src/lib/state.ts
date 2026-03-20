@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, renameSync, unlinkSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { Phase, getNextPhase } from './phases.js';
 
@@ -45,7 +45,15 @@ export function writeSession(stateDir: string, session: HiveSession): void {
   if (!existsSync(stateDir)) {
     mkdirSync(stateDir, { recursive: true });
   }
-  writeFileSync(sessionPath(stateDir), JSON.stringify(session, null, 2), 'utf-8');
+  const target = sessionPath(stateDir);
+  const tmp = `${target}.${process.pid}.tmp`;
+  try {
+    writeFileSync(tmp, JSON.stringify(session, null, 2), 'utf-8');
+    renameSync(tmp, target);
+  } catch (err) {
+    try { unlinkSync(tmp); } catch { /* ignore cleanup error */ }
+    throw err;
+  }
 }
 
 export function createSession(stateDir: string): HiveSession {

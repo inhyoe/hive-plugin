@@ -6,11 +6,7 @@ import {
   extractCreateMarkerGate,
   isGitCommit,
 } from '../lib/patterns.js';
-
-export interface HandlerResult {
-  exitCode: number;
-  message?: string;
-}
+import type { HandlerResult } from '../lib/types.js';
 
 // Maps gate argument (lowercase) to the Phase it completes
 const GATE_TO_PHASE: Record<string, Phase> = {

@@ -1,16 +1,9 @@
 import { readSession } from '../lib/state.js';
 import type { Phase } from '../lib/phases.js';
+import type { AgentInfo, HandlerResult } from '../lib/types.js';
+import { TEAM_ID_RE } from '../lib/types.js';
 
-export interface AgentInput {
-  prompt: string;
-  subagentType: string;
-  description: string;
-}
-
-export interface HandlerResult {
-  exitCode: number;
-  message?: string;
-}
+export type { AgentInfo as AgentInput };
 
 interface PhaseProfile {
   allowedTypes: string[];
@@ -38,9 +31,7 @@ const PHASE_PROFILES: Partial<Record<Phase, PhaseProfile>> = {
   },
 };
 
-const TEAM_ID_RE = /team[_-]?\w+/i;
-
-export function handleAgentDispatcher(input: AgentInput, stateDir: string): HandlerResult {
+export function handleAgentDispatcher(input: AgentInfo, stateDir: string): HandlerResult {
   const result = readSession(stateDir);
 
   // No session or corrupted → pass through (advisory handler)

@@ -1,9 +1,5 @@
 import { createSession, readSession } from '../lib/state.js';
-
-export interface HandlerResult {
-  exitCode: number;
-  message?: string;
-}
+import type { HandlerResult } from '../lib/types.js';
 
 const HIVE_RE = /^\s*\/hive\b/i;
 
