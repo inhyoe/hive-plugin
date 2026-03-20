@@ -139,8 +139,8 @@ hive-plugin/
 ├── systemd/                    # Auto-debugタイマー（定期検証）
 ├── .claude-plugin/plugin.json  # プラグインマニフェスト
 ├── marketplace.json            # プラグインマーケットプレイス登録
-├── install.sh                  # Systemd auto-debugインストーラー
-└── uninstall.sh                # Systemd auto-debugアンインストーラー
+├── install-systemd.sh          # Systemd auto-debugインストーラー
+└── uninstall-systemd.sh        # Systemd auto-debugアンインストーラー
 ```
 
 ### スキル
@@ -213,13 +213,13 @@ cp -r skills/* ~/.claude/skills/
 
 ```bash
 # インストール
-bash install.sh
+bash install-systemd.sh
 
 # 設定
 vim ~/.config/claude-auto-debug/config.env  # PROJECT_DIRを指定
 
 # アンインストール
-bash uninstall.sh
+bash uninstall-systemd.sh
 ```
 
 ## 使い方

@@ -139,8 +139,8 @@ hive-plugin/
 ├── systemd/                    # Auto-debug timer (periodic validation)
 ├── .claude-plugin/plugin.json  # Plugin manifest
 ├── marketplace.json            # Plugin marketplace registration
-├── install.sh                  # Systemd auto-debug installer
-└── uninstall.sh                # Systemd auto-debug remover
+├── install-systemd.sh          # Systemd auto-debug installer
+└── uninstall-systemd.sh        # Systemd auto-debug remover
 ```
 
 ### Skills
@@ -213,13 +213,13 @@ Sets up a systemd timer for periodic validation:
 
 ```bash
 # Install
-bash install.sh
+bash install-systemd.sh
 
 # Configure
 vim ~/.config/claude-auto-debug/config.env  # Set PROJECT_DIR
 
 # Uninstall
-bash uninstall.sh
+bash uninstall-systemd.sh
 ```
 
 ## Usage
