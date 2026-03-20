@@ -51,11 +51,14 @@ async function main(): Promise<void> {
 
     case 'phase-guard': {
       const command = extractCommandFromStdin(stdin);
-      if (command) {
-        const result = handlePhaseGuard(command, STATE_DIR);
-        if (result.message) console.error(result.message);
-        exitCode = result.exitCode;
+      if (!command) {
+        console.error('BLOCKED: failed to extract Bash command from hook payload.');
+        exitCode = 2;
+        break;
       }
+      const result = handlePhaseGuard(command, STATE_DIR);
+      if (result.message) console.error(result.message);
+      exitCode = result.exitCode;
       break;
     }
 

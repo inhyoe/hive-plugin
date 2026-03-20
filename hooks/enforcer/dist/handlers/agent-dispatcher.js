@@ -1,4 +1,5 @@
 import { readSession } from '../lib/state.js';
+import { TEAM_ID_RE } from '../lib/types.js';
 const RESEARCH_TYPES = ['Explore', 'Plan'];
 const PHASE_PROFILES = {
     P0: {
@@ -16,11 +17,14 @@ const PHASE_PROFILES = {
         warnMessage: 'WARNING: P4 requires consensus agents with team ID.',
     },
 };
-const TEAM_ID_RE = /team[_-]?\w+/i;
 export function handleAgentDispatcher(input, stateDir) {
-    const session = readSession(stateDir);
-    // IDLE: no session → pass through
-    if (!session || session.mode !== 'HIVE') {
+    const result = readSession(stateDir);
+    // No session or corrupted → pass through (advisory handler)
+    if (result.status !== 'ok') {
+        return { exitCode: 0 };
+    }
+    const session = result.session;
+    if (session.mode !== 'HIVE') {
         return { exitCode: 0 };
     }
     const profile = PHASE_PROFILES[session.phase];

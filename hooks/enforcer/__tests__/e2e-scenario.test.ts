@@ -6,7 +6,7 @@ import { handleIntentGate } from '../src/handlers/intent-gate.js';
 import { handlePhaseGuard } from '../src/handlers/phase-guard.js';
 import { handleAgentDispatcher } from '../src/handlers/agent-dispatcher.js';
 import { handleAgentTracker } from '../src/handlers/agent-tracker.js';
-import { readSession, writeSession, HiveSession } from '../src/lib/state.js';
+import { readSession, writeSession, advancePhase, HiveSession } from '../src/lib/state.js';
 
 function getSession(stateDir: string): HiveSession | null {
   const r = readSession(stateDir);
@@ -105,6 +105,40 @@ describe('E2E scenario: full lifecycle', () => {
     expect(updated.agentSpawns).toHaveLength(1);
     expect(updated.agentSpawns[0].teamId).toBe('team-alpha');
     expect(existsSync(join(stateDir, 'conversations'))).toBe(true);
+  });
+
+  it('handler + advancePhase lifecycle: G1 → G2 → P0 with completedGates', () => {
+    // Initialize via real handler
+    handleIntentGate('/hive lifecycle test', stateDir);
+    let session = getSession(stateDir)!;
+    expect(session.phase).toBe('G1');
+    expect(session.completedGates).toHaveLength(0);
+
+    // Advance through real state transitions
+    session = advancePhase(stateDir); // G1 → G2
+    expect(session.phase).toBe('G2');
+    expect(session.completedGates).toContain('G1');
+
+    session = advancePhase(stateDir); // G2 → P0
+    expect(session.phase).toBe('P0');
+    expect(session.completedGates).toEqual(['G1', 'G2']);
+
+    // Verify phase-guard at P0: create-marker for current phase works
+    const guardP0 = handlePhaseGuard('bash scripts/create-marker.sh p0', stateDir);
+    expect(guardP0.exitCode).toBe(0);
+
+    // Verify phase-guard at P0: skip to p3 blocked
+    const guardSkip = handlePhaseGuard('bash scripts/create-marker.sh p3', stateDir);
+    expect(guardSkip.exitCode).toBe(2);
+
+    // Agent dispatcher at P0: Explore allowed
+    const dispatchExplore = handleAgentDispatcher({
+      prompt: 'explore codebase',
+      subagentType: 'Explore',
+      description: 'explore',
+    }, stateDir);
+    expect(dispatchExplore.exitCode).toBe(0);
+    expect(dispatchExplore.message).toBeUndefined();
   });
 
   it('P5 implementation agent tracked and allowed', () => {

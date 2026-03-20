@@ -6,6 +6,10 @@ import { extractCommandFromStdin, extractPromptFromStdin, extractAgentInfoFromSt
 const STATE_DIR = process.env.HIVE_STATE_DIR ?? '.hive-state';
 function readStdin() {
     return new Promise((resolve) => {
+        if (process.stdin.isTTY) {
+            resolve('');
+            return;
+        }
         let data = '';
         process.stdin.setEncoding('utf-8');
         process.stdin.on('data', (chunk) => { data += chunk; });
@@ -37,12 +41,15 @@ async function main() {
         }
         case 'phase-guard': {
             const command = extractCommandFromStdin(stdin);
-            if (command) {
-                const result = handlePhaseGuard(command, STATE_DIR);
-                if (result.message)
-                    console.error(result.message);
-                exitCode = result.exitCode;
+            if (!command) {
+                console.error('BLOCKED: failed to extract Bash command from hook payload.');
+                exitCode = 2;
+                break;
             }
+            const result = handlePhaseGuard(command, STATE_DIR);
+            if (result.message)
+                console.error(result.message);
+            exitCode = result.exitCode;
             break;
         }
         case 'agent-dispatcher': {
@@ -72,7 +79,12 @@ async function main() {
     process.exit(exitCode);
 }
 main().catch((err) => {
-    console.error('Fatal error (non-blocking):', err);
-    process.exit(0); // Never block Claude on fatal errors
+    const handler = process.argv[2];
+    console.error(`Fatal error in ${handler}:`, err);
+    // Security-critical handlers fail closed; advisory handlers fail open
+    if (handler === 'phase-guard') {
+        process.exit(2);
+    }
+    process.exit(0);
 });
 //# sourceMappingURL=index.js.map

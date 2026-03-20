@@ -104,6 +104,66 @@ describe('Phase Guard handler', () => {
     });
   });
 
+  describe('hive-state write protection (C1)', () => {
+    it('blocks direct write to session.json', () => {
+      createSession(stateDir);
+      const result = handlePhaseGuard('echo \'{"mode":"IDLE"}\' > .hive-state/session.json', stateDir);
+      expect(result.exitCode).toBe(2);
+      expect(result.message).toMatch(/\.hive-state/);
+    });
+
+    it('blocks cp to hive-state', () => {
+      createSession(stateDir);
+      const result = handlePhaseGuard('cp fake.json .hive-state/session.json', stateDir);
+      expect(result.exitCode).toBe(2);
+    });
+
+    it('blocks rm of hive-state files', () => {
+      createSession(stateDir);
+      const result = handlePhaseGuard('rm .hive-state/session.json', stateDir);
+      expect(result.exitCode).toBe(2);
+    });
+
+    it('allows cat (read) of hive-state files', () => {
+      createSession(stateDir);
+      const result = handlePhaseGuard('cat .hive-state/session.json', stateDir);
+      expect(result.exitCode).toBe(0);
+    });
+  });
+
+  describe('shell chaining prevention (C2)', () => {
+    it('blocks create-marker.sh with && chain', () => {
+      createSession(stateDir);
+      const result = handlePhaseGuard('bash scripts/create-marker.sh g1 && git commit -m x', stateDir);
+      expect(result.exitCode).toBe(2);
+      expect(result.message).toMatch(/chaining|standalone/i);
+    });
+
+    it('blocks create-marker.sh with ; chain', () => {
+      createSession(stateDir);
+      const result = handlePhaseGuard('bash scripts/create-marker.sh g1; rm -rf /', stateDir);
+      expect(result.exitCode).toBe(2);
+    });
+
+    it('blocks create-marker.sh with pipe', () => {
+      createSession(stateDir);
+      const result = handlePhaseGuard('bash scripts/create-marker.sh g1 | tee log', stateDir);
+      expect(result.exitCode).toBe(2);
+    });
+
+    it('allows standalone create-marker.sh', () => {
+      createSession(stateDir);
+      const result = handlePhaseGuard('bash scripts/create-marker.sh g1', stateDir);
+      expect(result.exitCode).toBe(0);
+    });
+
+    it('allows create-marker.sh with flags', () => {
+      createSession(stateDir);
+      const result = handlePhaseGuard('bash scripts/create-marker.sh g1 --team-id alpha --evidence-file spec.md', stateDir);
+      expect(result.exitCode).toBe(0);
+    });
+  });
+
   describe('non-matching commands', () => {
     it('allows git add during HIVE mode', () => {
       createSession(stateDir);

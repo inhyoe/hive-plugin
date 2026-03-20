@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, existsSync, readdirSync, readFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, existsSync, readdirSync, readFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
@@ -114,6 +114,31 @@ describe('Session state manager', () => {
       const updated = advancePhase(stateDir); // G2 → P0
       expect(updated.phase).toBe('P0');
       expect(updated.completedGates).toEqual(['G1', 'G2']);
+    });
+  });
+
+  describe('lock recovery', () => {
+    it('recovers from orphan lock dir (info.json missing)', () => {
+      createSession(stateDir);
+      // Simulate crash: lock dir exists but info.json was never written
+      mkdirSync(join(stateDir, 'session.lock'));
+
+      // advancePhase should reap the orphan lock and succeed
+      const updated = advancePhase(stateDir);
+      expect(updated.phase).toBe('G2');
+      // Lock dir should be cleaned up
+      expect(existsSync(join(stateDir, 'session.lock'))).toBe(false);
+    });
+
+    it('recovers from stale lock with dead PID', () => {
+      createSession(stateDir);
+      // Simulate stale lock with a PID that doesn't exist
+      mkdirSync(join(stateDir, 'session.lock'));
+      const staleInfo = JSON.stringify({ pid: 999999999, startedAt: new Date().toISOString(), host: require('os').hostname() });
+      require('fs').writeFileSync(join(stateDir, 'session.lock', 'info.json'), staleInfo);
+
+      const updated = advancePhase(stateDir);
+      expect(updated.phase).toBe('G2');
     });
   });
 

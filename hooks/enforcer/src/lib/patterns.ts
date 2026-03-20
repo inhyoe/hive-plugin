@@ -18,12 +18,35 @@ export function isCreateMarkerCall(command: string): boolean {
 }
 
 export function extractCreateMarkerGate(command: string): string | null {
-  const match = command.match(/create-marker\.sh\s+(\S+)/);
-  return match ? match[1] : null;
+  const match = command.match(/create-marker\.sh\s+(.*)/);
+  if (!match) return null;
+  // Tokenize and skip known flags with their values
+  const tokens = match[1].trim().split(/\s+/);
+  const FLAGS_WITH_VALUE = new Set(['--team-id', '--evidence-file']);
+  for (let i = 0; i < tokens.length; i++) {
+    if (FLAGS_WITH_VALUE.has(tokens[i])) {
+      i++; // skip flag value
+      continue;
+    }
+    if (tokens[i].startsWith('--')) continue; // unknown flag without value
+    return tokens[i]; // first positional = gate
+  }
+  return null;
 }
 
 export function isGitCommit(command: string): boolean {
   return /\bgit\s+commit\b/.test(command);
+}
+
+export function isHiveStateWrite(command: string): boolean {
+  if (!/\.hive-state/.test(command)) return false;
+  // Write indicators: redirects, destructive/write commands, interpreters
+  return /[>]|\btee\b|\b(cp|mv|rm|touch|chmod|chown|dd|ln|install|sed|perl|python|python3|ruby|node)\s/.test(command);
+}
+
+export function hasShellChaining(command: string): boolean {
+  // Matches: &&, ||, ;, |, & (background), newlines, backticks, $()
+  return /&&|\|\||[;|&`\n]|\$\(/.test(command);
 }
 
 export function extractCommandFromStdin(stdin: string): string | null {

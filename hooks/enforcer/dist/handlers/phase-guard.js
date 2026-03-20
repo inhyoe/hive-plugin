@@ -1,6 +1,6 @@
 import { readSession } from '../lib/state.js';
 import { phaseIndex } from '../lib/phases.js';
-import { isDirectMarkerCreation, isCreateMarkerCall, extractCreateMarkerGate, isGitCommit, } from '../lib/patterns.js';
+import { isDirectMarkerCreation, isCreateMarkerCall, extractCreateMarkerGate, isGitCommit, isHiveStateWrite, hasShellChaining, } from '../lib/patterns.js';
 // Maps gate argument (lowercase) to the Phase it completes
 const GATE_TO_PHASE = {
     g1: 'G1',
@@ -14,9 +14,19 @@ const GATE_TO_PHASE = {
     p5: 'P5',
 };
 export function handlePhaseGuard(command, stateDir) {
-    const session = readSession(stateDir);
-    // IDLE: no session → pass through everything
-    if (!session || session.mode !== 'HIVE') {
+    const result = readSession(stateDir);
+    // No session file → IDLE → pass through
+    if (result.status === 'not_found')
+        return { exitCode: 0 };
+    // Corrupted session → fail closed (security-critical)
+    if (result.status === 'parse_error') {
+        return {
+            exitCode: 2,
+            message: `BLOCKED: session.json corrupted (${result.error}). Delete .hive-state/session.json to proceed.`,
+        };
+    }
+    const session = result.session;
+    if (session.mode !== 'HIVE') {
         return { exitCode: 0 };
     }
     // Step 1: Block direct marker creation (forgery)
@@ -28,6 +38,13 @@ export function handlePhaseGuard(command, stateDir) {
     }
     // Step 2: Validate create-marker.sh gate order
     if (isCreateMarkerCall(command)) {
+        // C2: Block chained commands (e.g., create-marker.sh g1 && git commit)
+        if (hasShellChaining(command)) {
+            return {
+                exitCode: 2,
+                message: 'BLOCKED: create-marker.sh must be a standalone command. Shell chaining (&&, ||, ;, |) is not allowed.',
+            };
+        }
         const gate = extractCreateMarkerGate(command);
         if (gate) {
             const gatePhase = GATE_TO_PHASE[gate.toLowerCase()];
@@ -46,7 +63,14 @@ export function handlePhaseGuard(command, stateDir) {
         }
         return { exitCode: 0 };
     }
-    // Step 3: Block git commit before P5
+    // Step 3: Block direct writes to .hive-state/ (FSM tampering)
+    if (isHiveStateWrite(command)) {
+        return {
+            exitCode: 2,
+            message: 'BLOCKED: Direct write to .hive-state/ detected. Use scripts/create-marker.sh for state transitions.',
+        };
+    }
+    // Step 4: Block git commit before P5
     if (isGitCommit(command)) {
         if (session.phase !== 'P5') {
             return {

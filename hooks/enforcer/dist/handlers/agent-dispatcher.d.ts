@@ -1,10 +1,3 @@
-export interface AgentInput {
-    prompt: string;
-    subagentType: string;
-    description: string;
-}
-export interface HandlerResult {
-    exitCode: number;
-    message?: string;
-}
-export declare function handleAgentDispatcher(input: AgentInput, stateDir: string): HandlerResult;
+import type { AgentInfo, HandlerResult } from '../lib/types.js';
+export type { AgentInfo as AgentInput };
+export declare function handleAgentDispatcher(input: AgentInfo, stateDir: string): HandlerResult;

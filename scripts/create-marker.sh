@@ -120,6 +120,14 @@ if [[ "$GATE_LOWER" == "p4" ]]; then
   fi
 fi
 
+# ── G2 requires evidence (SPEC hash) ──
+if [[ "$GATE_LOWER" == "g2" ]]; then
+  if [[ -z "$EVIDENCE_FILE" ]] || [[ ! -r "$EVIDENCE_FILE" ]]; then
+    echo "ERROR: G2 requires --evidence-file to record the SPEC hash" >&2
+    exit 1
+  fi
+fi
+
 if [[ "$GATE_LOWER" =~ ^(g3|p4)$ ]] && [[ -z "$EVIDENCE_FILE" ]]; then
   echo "WARNING: Consensus gate ${GATE_UPPER} without --evidence-file" >&2
 fi
@@ -141,6 +149,47 @@ team_id: ${TEAM_ID:-none}
 MARKER
 
 echo "✓ Marker created: ${STATE_DIR}/${MARKER_NAME}"
+
+# ── Acquire session lock (shared with TS enforcer) ──
+LOCK_DIR="${STATE_DIR}/session.lock"
+LOCK_INFO="${LOCK_DIR}/info.json"
+LOCK_TIMEOUT=3
+LOCK_ACQUIRED=0
+
+acquire_session_lock() {
+  local deadline=$((SECONDS + LOCK_TIMEOUT))
+  while ! mkdir "$LOCK_DIR" 2>/dev/null; do
+    # Check for stale lock
+    if [[ -f "$LOCK_INFO" ]]; then
+      local lock_pid
+      lock_pid=$(jq -r '.pid // empty' "$LOCK_INFO" 2>/dev/null || true)
+      if [[ -n "$lock_pid" ]] && ! kill -0 "$lock_pid" 2>/dev/null; then
+        rm -f "$LOCK_INFO"
+        rmdir "$LOCK_DIR" 2>/dev/null || true
+        continue
+      fi
+    fi
+    if (( SECONDS >= deadline )); then
+      echo "ERROR: Failed to acquire session lock after ${LOCK_TIMEOUT}s" >&2
+      exit 1
+    fi
+    sleep "0.0$(( RANDOM % 50 + 50 ))"
+  done
+  echo "{\"pid\":$$,\"startedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"host\":\"$(hostname)\"}" > "$LOCK_INFO"
+  LOCK_ACQUIRED=1
+}
+
+release_session_lock() {
+  if [[ "$LOCK_ACQUIRED" -eq 1 ]]; then
+    rm -f "$LOCK_INFO"
+    rmdir "$LOCK_DIR" 2>/dev/null || true
+    LOCK_ACQUIRED=0
+  fi
+}
+
+trap release_session_lock EXIT
+
+acquire_session_lock
 
 # ── Update session.json ──
 NEXT_PHASE="${GATE_NEXT_PHASE[$GATE_LOWER]}"

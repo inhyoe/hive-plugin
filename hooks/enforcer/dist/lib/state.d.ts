@@ -7,14 +7,24 @@ export interface AgentSpawn {
     provider?: string;
 }
 export interface HiveSession {
-    mode: 'HIVE' | 'IDLE';
+    mode: 'HIVE' | 'IDLE' | 'DONE';
     phase: Phase;
     completedGates: Phase[];
     agentSpawns: AgentSpawn[];
     startedAt: string;
 }
-export declare function readSession(stateDir: string): HiveSession | null;
+export type SessionReadResult = {
+    status: 'ok';
+    session: HiveSession;
+} | {
+    status: 'not_found';
+} | {
+    status: 'parse_error';
+    error: string;
+};
+export declare function readSession(stateDir: string): SessionReadResult;
 export declare function writeSession(stateDir: string, session: HiveSession): void;
+export declare function updateSession(stateDir: string, mutator: (session: HiveSession) => void): HiveSession;
 export declare function createSession(stateDir: string): HiveSession;
 export declare function advancePhase(stateDir: string): HiveSession;
 export declare function addAgentSpawn(stateDir: string, spawn: AgentSpawn): HiveSession;

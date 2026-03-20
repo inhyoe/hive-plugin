@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { handleIntentGate } from '../src/handlers/intent-gate.js';
@@ -44,6 +44,32 @@ describe('Intent Gate handler', () => {
     const result = handleIntentGate('/hive second', stateDir);
     expect(result.exitCode).toBe(0);
     expect(result.message).toMatch(/already active/i);
+  });
+
+  it('recovers from corrupted session.json on /hive', () => {
+    // Inject corrupted session.json
+    mkdirSync(stateDir, { recursive: true });
+    writeFileSync(join(stateDir, 'session.json'), '{invalid json!!!', 'utf-8');
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const result = handleIntentGate('/hive test', stateDir);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.message).toMatch(/HIVE mode activated/i);
+
+    // Verify recovery: fresh session created
+    const sr = readSession(stateDir);
+    expect(sr.status).toBe('ok');
+    if (sr.status === 'ok') {
+      expect(sr.session.phase).toBe('G1');
+      expect(sr.session.mode).toBe('HIVE');
+    }
+
+    // Verify recovery warning was emitted
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/corrupted/i),
+    );
+    consoleSpy.mockRestore();
   });
 
   it('always exits 0 (never blocks user input)', () => {

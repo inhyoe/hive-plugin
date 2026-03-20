@@ -5,6 +5,8 @@ import {
   isCreateMarkerCall,
   extractCreateMarkerGate,
   isGitCommit,
+  isHiveStateWrite,
+  hasShellChaining,
 } from '../lib/patterns.js';
 import type { HandlerResult } from '../lib/types.js';
 
@@ -50,6 +52,14 @@ export function handlePhaseGuard(command: string, stateDir: string): HandlerResu
 
   // Step 2: Validate create-marker.sh gate order
   if (isCreateMarkerCall(command)) {
+    // C2: Block chained commands (e.g., create-marker.sh g1 && git commit)
+    if (hasShellChaining(command)) {
+      return {
+        exitCode: 2,
+        message: 'BLOCKED: create-marker.sh must be a standalone command. Shell chaining (&&, ||, ;, |) is not allowed.',
+      };
+    }
+
     const gate = extractCreateMarkerGate(command);
     if (gate) {
       const gatePhase = GATE_TO_PHASE[gate.toLowerCase()];
@@ -71,7 +81,15 @@ export function handlePhaseGuard(command: string, stateDir: string): HandlerResu
     return { exitCode: 0 };
   }
 
-  // Step 3: Block git commit before P5
+  // Step 3: Block direct writes to .hive-state/ (FSM tampering)
+  if (isHiveStateWrite(command)) {
+    return {
+      exitCode: 2,
+      message: 'BLOCKED: Direct write to .hive-state/ detected. Use scripts/create-marker.sh for state transitions.',
+    };
+  }
+
+  // Step 4: Block git commit before P5
   if (isGitCommit(command)) {
     if (session.phase !== 'P5') {
       return {

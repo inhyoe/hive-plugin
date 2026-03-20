@@ -4,6 +4,8 @@ import {
   isCreateMarkerCall,
   extractCreateMarkerGate,
   isGitCommit,
+  isHiveStateWrite,
+  hasShellChaining,
   extractCommandFromStdin,
   extractPromptFromStdin,
   extractAgentInfoFromStdin,
@@ -97,12 +99,112 @@ describe('Pattern matching', () => {
       expect(extractCreateMarkerGate('bash scripts/create-marker.sh g1')).toBe('g1');
     });
 
-    it('extracts with extra args', () => {
+    it('extracts with extra args after gate', () => {
       expect(extractCreateMarkerGate('bash scripts/create-marker.sh g3 --evidence-file e.txt')).toBe('g3');
+    });
+
+    it('extracts gate when flags come before gate', () => {
+      expect(extractCreateMarkerGate('bash scripts/create-marker.sh --team-id alpha g1')).toBe('g1');
+    });
+
+    it('extracts gate with multiple flags before gate', () => {
+      expect(extractCreateMarkerGate('bash scripts/create-marker.sh --team-id alpha --evidence-file spec.md g2')).toBe('g2');
     });
 
     it('returns null for non-marker commands', () => {
       expect(extractCreateMarkerGate('echo test')).toBeNull();
+    });
+
+    it('returns null when only flags (no positional gate)', () => {
+      expect(extractCreateMarkerGate('bash scripts/create-marker.sh --team-id alpha')).toBeNull();
+    });
+  });
+
+  describe('isHiveStateWrite', () => {
+    it('detects redirect to .hive-state', () => {
+      expect(isHiveStateWrite('echo x > .hive-state/session.json')).toBe(true);
+    });
+
+    it('detects cp to .hive-state', () => {
+      expect(isHiveStateWrite('cp fake.json .hive-state/session.json')).toBe(true);
+    });
+
+    it('detects rm of .hive-state', () => {
+      expect(isHiveStateWrite('rm .hive-state/session.json')).toBe(true);
+    });
+
+    it('detects ln -sf to .hive-state', () => {
+      expect(isHiveStateWrite('ln -sf /tmp/fake .hive-state/session.json')).toBe(true);
+    });
+
+    it('detects install to .hive-state', () => {
+      expect(isHiveStateWrite('install -m 644 fake.json .hive-state/session.json')).toBe(true);
+    });
+
+    it('detects sed -i on .hive-state', () => {
+      expect(isHiveStateWrite('sed -i \'s/HIVE/IDLE/\' .hive-state/session.json')).toBe(true);
+    });
+
+    it('detects python write to .hive-state', () => {
+      expect(isHiveStateWrite('python -c "open(\'.hive-state/session.json\',\'w\')"')).toBe(true);
+    });
+
+    it('detects node write to .hive-state', () => {
+      expect(isHiveStateWrite('node -e "require(\'fs\').writeFileSync(\'.hive-state/session.json\',\'{}\')"')).toBe(true);
+    });
+
+    it('detects relative path ./.hive-state', () => {
+      expect(isHiveStateWrite('echo x > ./.hive-state/session.json')).toBe(true);
+    });
+
+    it('allows read of .hive-state (no write indicators)', () => {
+      expect(isHiveStateWrite('cat .hive-state/session.json')).toBe(false);
+    });
+
+    it('allows jq read of .hive-state', () => {
+      expect(isHiveStateWrite('jq .phase .hive-state/session.json')).toBe(false);
+    });
+
+    it('ignores commands not referencing .hive-state', () => {
+      expect(isHiveStateWrite('echo hello world')).toBe(false);
+    });
+  });
+
+  describe('hasShellChaining', () => {
+    it('detects &&', () => {
+      expect(hasShellChaining('cmd1 && cmd2')).toBe(true);
+    });
+
+    it('detects ||', () => {
+      expect(hasShellChaining('cmd1 || cmd2')).toBe(true);
+    });
+
+    it('detects ;', () => {
+      expect(hasShellChaining('cmd1; cmd2')).toBe(true);
+    });
+
+    it('detects pipe', () => {
+      expect(hasShellChaining('cmd1 | cmd2')).toBe(true);
+    });
+
+    it('detects background &', () => {
+      expect(hasShellChaining('malicious-cmd &')).toBe(true);
+    });
+
+    it('detects backtick substitution', () => {
+      expect(hasShellChaining('cmd `evil`')).toBe(true);
+    });
+
+    it('detects $() substitution', () => {
+      expect(hasShellChaining('cmd $(evil)')).toBe(true);
+    });
+
+    it('detects newline separation', () => {
+      expect(hasShellChaining('cmd1\ncmd2')).toBe(true);
+    });
+
+    it('returns false for standalone command', () => {
+      expect(hasShellChaining('bash scripts/create-marker.sh g1 --team-id alpha')).toBe(false);
     });
   });
 

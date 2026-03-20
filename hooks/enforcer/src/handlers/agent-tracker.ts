@@ -40,7 +40,7 @@ export function handleAgentTracker(input: AgentInfo, stateDir: string): HandlerR
     if (session.phase === 'P4') {
       const convDir = join(stateDir, 'conversations');
       mkdirSync(convDir, { recursive: true });
-      const filename = `${Date.now()}-${teamId ?? 'unknown'}.json`;
+      const filename = `${Date.now()}-${process.pid}-${teamId ?? 'unknown'}.json`;
       writeFileSync(join(convDir, filename), JSON.stringify({
         phase: session.phase,
         teamId,
@@ -53,7 +53,7 @@ export function handleAgentTracker(input: AgentInfo, stateDir: string): HandlerR
     if (session.phase === 'P5') {
       const implDir = join(stateDir, 'implementations');
       mkdirSync(implDir, { recursive: true });
-      const filename = `${Date.now()}-${teamId ?? 'unknown'}.json`;
+      const filename = `${Date.now()}-${process.pid}-${teamId ?? 'unknown'}.json`;
       writeFileSync(join(implDir, filename), JSON.stringify({
         phase: session.phase,
         teamId,

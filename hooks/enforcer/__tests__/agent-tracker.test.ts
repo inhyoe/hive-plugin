@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtempSync, rmSync, existsSync, readdirSync, readFileSync, chmodSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -57,7 +57,7 @@ describe('Agent Tracker handler', () => {
     expect(existsSync(convDir)).toBe(true);
     const files = readdirSync(convDir);
     expect(files).toHaveLength(1);
-    expect(files[0]).toMatch(/^\d+-team-alpha\.json$/);
+    expect(files[0]).toMatch(/^\d+-\d+-team-alpha\.json$/);
     const content = JSON.parse(readFileSync(join(convDir, files[0]), 'utf-8'));
     expect(content.phase).toBe('P4');
     expect(content.teamId).toBe('team-alpha');
@@ -79,7 +79,7 @@ describe('Agent Tracker handler', () => {
     expect(existsSync(implDir)).toBe(true);
     const files = readdirSync(implDir);
     expect(files).toHaveLength(1);
-    expect(files[0]).toMatch(/^\d+-team-beta\.json$/);
+    expect(files[0]).toMatch(/^\d+-\d+-team-beta\.json$/);
     const content = JSON.parse(readFileSync(join(implDir, files[0]), 'utf-8'));
     expect(content.phase).toBe('P5');
     expect(content.teamId).toBe('team-beta');
@@ -134,15 +134,20 @@ describe('Agent Tracker handler', () => {
 
   it('returns exitCode 0 even when write fails (B4: advisory exception handling)', () => {
     createSession(stateDir);
-    // Make stateDir read-only to force write failure
-    chmodSync(stateDir, 0o444);
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // 0o555: readable + executable (readSession works) but not writable (lock fails)
+    chmodSync(stateDir, 0o555);
     const result = handleAgentTracker({
       prompt: 'test team-alpha',
       subagentType: 'Explore',
       description: 'test',
     }, stateDir);
-    // Restore permissions for cleanup
     chmodSync(stateDir, 0o755);
     expect(result.exitCode).toBe(0);
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/advisory/i),
+      expect.anything(),
+    );
+    consoleSpy.mockRestore();
   });
 });
