@@ -43,9 +43,9 @@ if [[ -z "$INTERVAL" ]]; then
     INTERVAL="6h"
 fi
 
-if [[ "$INTERVAL" == \"*\" && "$INTERVAL" == *\" ]]; then
+if [[ "$INTERVAL" == '"'* && "$INTERVAL" == *'"' ]]; then
     INTERVAL="${INTERVAL:1:-1}"
-elif [[ "$INTERVAL" == \'*\' && "$INTERVAL" == *\' ]]; then
+elif [[ "$INTERVAL" == "'"* && "$INTERVAL" == *"'" ]]; then
     INTERVAL="${INTERVAL:1:-1}"
 fi
 

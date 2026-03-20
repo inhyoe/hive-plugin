@@ -6,7 +6,7 @@
 
 Orchestrate multi-provider AI teams (Claude, Codex, Gemini) through a research-backed quality pipeline. Hive decomposes complex tasks into team-based modules, enforces consensus-driven planning, and executes through a strict TDD pipeline — all with real-time visualization.
 
-```
+```text
 /hive "Add real-time chat feature"
 
   G1 CLARIFY ─→ G2 SPEC ─→ Prompt Eng ─→ Brainstorm ─→ Serena Context
@@ -54,7 +54,7 @@ Every gate emits a marker file. **No marker = no progress.**
 
 ### Agent Isolation (CodeDelegator Pattern)
 
-```
+```text
 Agent A (Claude)           Agent B (Codex)          Agent C (Gemini)
 ├─ Writes tests from SPEC  ├─ Implements code        ├─ Mutation/PBT verification
 ├─ Cannot see impl code    ├─ Cannot see test intent ├─ Cannot see process
@@ -113,7 +113,7 @@ cd dashboard/server && npm run dev   # WebSocket event server
 
 ### Project Structure
 
-```
+```text
 hive-plugin/
 ├── skills/                     # 6 skill modules (1,778 lines total)
 │   ├── hive/                   # Entrypoint — phase router, hard gates, provider rules
@@ -246,7 +246,7 @@ The quality pipeline activates automatically:
 2. **G2 SPEC** — A 6-section spec is generated for your approval
 3. **Phase 0-3** — Prompt engineering, brainstorming, codebase analysis, team decomposition
 4. **G3 PLAN REVIEW** — Designer and reviewer debate the plan (score >= 7.0 to pass)
-5. **Phase 4** — Each team reaches consensus via AGREE/COUNTER/CLARIFY
+5. **Phase 4** — Each team reaches consensus via AGREE/COUNTER/CLARIFY (validated by `validate-phase5-entry.sh`)
 6. **G4-G7** — TDD pipeline: tests first (RED), implementation (GREEN), cross-verification, E2E validation
 
 ## Validation

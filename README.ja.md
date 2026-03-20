@@ -6,7 +6,7 @@
 
 マルチプロバイダーAIチーム（Claude、Codex、Gemini）を研究に基づいた品質パイプラインでオーケストレーションします。複雑なタスクをチームベースのモジュールに分解し、コンセンサス駆動の設計を強制し、厳格なTDDパイプラインで実行します — リアルタイム可視化ダッシュボード付き。
 
-```
+```text
 /hive "リアルタイムチャット機能を追加"
 
   G1 CLARIFY ─→ G2 SPEC ─→ プロンプトEng ─→ ブレスト ─→ Serenaコンテキスト
@@ -54,7 +54,7 @@
 
 ### エージェント分離（CodeDelegatorパターン）
 
-```
+```text
 Agent A (Claude)           Agent B (Codex)          Agent C (Gemini)
 ├─ SPEC基準テスト作成       ├─ コード実装              ├─ ミューテーション/PBT検証
 ├─ 実装コードアクセス不可    ├─ テスト意図アクセス不可   ├─ プロセスアクセス不可
@@ -113,7 +113,7 @@ cd dashboard/server && npm run dev   # WebSocketイベントサーバー
 
 ### プロジェクト構成
 
-```
+```text
 hive-plugin/
 ├── skills/                     # 6スキルモジュール（合計1,778行）
 │   ├── hive/                   # エントリポイント — Phaseルーター、ハードゲート、プロバイダールール
@@ -246,7 +246,7 @@ bash uninstall-systemd.sh
 2. **G2 SPEC** — 6セクション仕様が生成され承認を要求
 3. **Phase 0-3** — プロンプトエンジニアリング、ブレスト、コードベース分析、チーム分解
 4. **G3 PLAN REVIEW** — DesignerとReviewerが計画を討論（スコア >= 7.0で通過）
-5. **Phase 4** — 各チームがAGREE/COUNTER/CLARIFYでコンセンサス
+5. **Phase 4** — 各チームがAGREE/COUNTER/CLARIFYでコンセンサス（`validate-phase5-entry.sh`で検証）
 6. **G4-G7** — TDDパイプライン：テスト先行（RED）、実装（GREEN）、交差検証、E2E検証
 
 ## 検証

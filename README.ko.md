@@ -6,7 +6,7 @@
 
 멀티 프로바이더 AI 팀(Claude, Codex, Gemini)을 연구 기반 품질 파이프라인으로 오케스트레이션합니다. 복잡한 작업을 팀 기반 모듈로 분해하고, 합의 기반 설계를 강제하며, 엄격한 TDD 파이프라인을 통해 실행합니다 — 실시간 시각화 대시보드와 함께.
 
-```
+```text
 /hive "실시간 채팅 기능 추가"
 
   G1 CLARIFY ─→ G2 SPEC ─→ 프롬프트 엔지니어링 ─→ 브레인스톰 ─→ Serena 컨텍스트
@@ -54,7 +54,7 @@
 
 ### 에이전트 격리 (CodeDelegator 패턴)
 
-```
+```text
 Agent A (Claude)           Agent B (Codex)          Agent C (Gemini)
 ├─ SPEC 기반 테스트 작성    ├─ 코드 구현              ├─ 뮤테이션/PBT 검증
 ├─ 구현 코드 접근 불가      ├─ 테스트 의도 접근 불가   ├─ 과정 접근 불가
@@ -113,7 +113,7 @@ cd dashboard/server && npm run dev   # WebSocket 이벤트 서버
 
 ### 프로젝트 구조
 
-```
+```text
 hive-plugin/
 ├── skills/                     # 6개 스킬 모듈 (총 1,778줄)
 │   ├── hive/                   # 엔트리포인트 — Phase 라우터, 하드 게이트, 프로바이더 규칙
@@ -246,7 +246,7 @@ bash uninstall-systemd.sh
 2. **G2 SPEC** — 6섹션 명세가 생성되어 승인 요청
 3. **Phase 0-3** — 프롬프트 엔지니어링, 브레인스톰, 코드베이스 분석, 팀 분해
 4. **G3 PLAN REVIEW** — Designer와 Reviewer가 계획을 토론 (점수 >= 7.0 통과)
-5. **Phase 4** — 각 팀이 AGREE/COUNTER/CLARIFY를 통해 합의
+5. **Phase 4** — 각 팀이 AGREE/COUNTER/CLARIFY를 통해 합의 (`validate-phase5-entry.sh`로 검증)
 6. **G4-G7** — TDD 파이프라인: 테스트 우선 (RED), 구현 (GREEN), 교차 검증, E2E 검증
 
 ## 검증
