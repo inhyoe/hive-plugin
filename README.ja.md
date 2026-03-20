@@ -201,10 +201,17 @@ Hiveは`hooks/hooks.json`を通じてClaude Codeフックを登録します：
 
 ### 手動インストール
 
-全スキルディレクトリをClaude Codeスキルフォルダにコピーします：
+インストールスクリプトはシンボリックリンクを作成するため、`git pull`だけでHiveを使用する全プロジェクトが自動更新されます。
 
 ```bash
-cp -r skills/* ~/.claude/skills/
+# インストール（シンボリックリンク作成 — git pullで全プロジェクト自動更新）
+bash install.sh
+
+# 変更なしでプレビュー
+bash install.sh --dry-run
+
+# アンインストール
+bash install.sh --uninstall
 ```
 
 ### Auto-Debugタイマー（オプション）

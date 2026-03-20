@@ -201,10 +201,17 @@ Hive는 `hooks/hooks.json`을 통해 Claude Code 훅을 등록합니다:
 
 ### 수동 설치
 
-모든 스킬 디렉토리를 Claude Code 스킬 폴더에 복사합니다:
+설치 스크립트는 심볼릭 링크를 생성하므로, `git pull`만으로 Hive를 사용하는 모든 프로젝트가 자동 업데이트됩니다.
 
 ```bash
-cp -r skills/* ~/.claude/skills/
+# 설치 (심볼릭 링크 생성 — git pull로 모든 프로젝트 자동 업데이트)
+bash install.sh
+
+# 변경 없이 미리보기
+bash install.sh --dry-run
+
+# 제거
+bash install.sh --uninstall
 ```
 
 ### Auto-Debug 타이머 (선택)

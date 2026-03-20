@@ -201,10 +201,17 @@ Markers are stored as files to prevent conversation context bloat. Only `[G1 ✓
 
 ### Manual Installation
 
-Copy all skill directories to your Claude Code skills folder:
+The install script creates symlinks, so `git pull` automatically updates all projects that use Hive.
 
 ```bash
-cp -r skills/* ~/.claude/skills/
+# Install (creates symlinks — git pull updates all projects automatically)
+bash install.sh
+
+# Preview without changes
+bash install.sh --dry-run
+
+# Uninstall
+bash install.sh --uninstall
 ```
 
 ### Auto-Debug Timer (Optional)
