@@ -160,15 +160,20 @@ export function updateSession(stateDir: string, mutator: (session: HiveSession) 
 }
 
 export function createSession(stateDir: string): HiveSession {
-  const session: HiveSession = {
-    mode: 'HIVE',
-    phase: 'G1',
-    completedGates: [],
-    agentSpawns: [],
-    startedAt: new Date().toISOString(),
-  };
-  writeSession(stateDir, session);
-  return session;
+  acquireLock(stateDir);
+  try {
+    const session: HiveSession = {
+      mode: 'HIVE',
+      phase: 'G1',
+      completedGates: [],
+      agentSpawns: [],
+      startedAt: new Date().toISOString(),
+    };
+    writeSession(stateDir, session);
+    return session;
+  } finally {
+    releaseLock(stateDir);
+  }
 }
 
 export function advancePhase(stateDir: string): HiveSession {

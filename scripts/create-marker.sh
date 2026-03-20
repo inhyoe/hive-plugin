@@ -89,68 +89,8 @@ if ! command -v jq &>/dev/null; then
   exit 1
 fi
 
-CURRENT_PHASE=$(jq -r '.phase' "$SESSION_FILE")
-CURRENT_MODE=$(jq -r '.mode' "$SESSION_FILE")
-GATE_UPPER="${GATE_LOWER^^}"
-
-# Validate session is in HIVE mode
-if [[ "$CURRENT_MODE" != "HIVE" ]]; then
-  echo "ERROR: Session not in HIVE mode (current: ${CURRENT_MODE}). Marker creation blocked." >&2
-  exit 1
-fi
-
-# Validate current phase matches gate
-if [[ "$CURRENT_PHASE" != "$GATE_UPPER" ]]; then
-  echo "ERROR: Phase mismatch. Current: ${CURRENT_PHASE}, Gate: ${GATE_UPPER}" >&2
-  exit 1
-fi
-
-# ── Consensus gates require evidence ──
-if [[ "$GATE_LOWER" == "p4" ]]; then
-  # Run validate-phase5-entry.sh (mandatory for P4→P5 transition)
-  VALIDATE_SCRIPT="scripts/validate-phase5-entry.sh"
-  if [[ ! -f "$VALIDATE_SCRIPT" ]]; then
-    echo "ERROR: ${VALIDATE_SCRIPT} not found. Phase 5 entry validation is mandatory." >&2
-    exit 1
-  fi
-  echo "Running Phase 5 entry validation..."
-  if ! bash "$VALIDATE_SCRIPT"; then
-    echo "ERROR: Phase 5 entry validation failed" >&2
-    exit 1
-  fi
-fi
-
-# ── G2 requires evidence (SPEC hash) ──
-if [[ "$GATE_LOWER" == "g2" ]]; then
-  if [[ -z "$EVIDENCE_FILE" ]] || [[ ! -r "$EVIDENCE_FILE" ]]; then
-    echo "ERROR: G2 requires --evidence-file to record the SPEC hash" >&2
-    exit 1
-  fi
-fi
-
-if [[ "$GATE_LOWER" =~ ^(g3|p4)$ ]] && [[ -z "$EVIDENCE_FILE" ]]; then
-  echo "WARNING: Consensus gate ${GATE_UPPER} without --evidence-file" >&2
-fi
-
-# ── Create marker ──
-mkdir -p "$STATE_DIR"
-TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-EVIDENCE_HASH=""
-
-if [[ -n "$EVIDENCE_FILE" ]] && [[ -f "$EVIDENCE_FILE" ]]; then
-  EVIDENCE_HASH=$(sha256sum "$EVIDENCE_FILE" | cut -d' ' -f1)
-fi
-
-cat > "${STATE_DIR}/${MARKER_NAME}" <<MARKER
-timestamp: ${TIMESTAMP}
-gate: ${GATE_UPPER}
-evidence_hash: ${EVIDENCE_HASH:-none}
-team_id: ${TEAM_ID:-none}
-MARKER
-
-echo "✓ Marker created: ${STATE_DIR}/${MARKER_NAME}"
-
 # ── Acquire session lock (shared with TS enforcer) ──
+# Lock MUST be acquired BEFORE reading/validating session state
 LOCK_DIR="${STATE_DIR}/session.lock"
 LOCK_INFO="${LOCK_DIR}/info.json"
 LOCK_TIMEOUT=3
@@ -158,6 +98,7 @@ LOCK_ACQUIRED=0
 
 acquire_session_lock() {
   local deadline=$((SECONDS + LOCK_TIMEOUT))
+  mkdir -p "$STATE_DIR"
   while ! mkdir "$LOCK_DIR" 2>/dev/null; do
     # Check for stale lock
     if [[ -f "$LOCK_INFO" ]]; then
@@ -190,6 +131,75 @@ release_session_lock() {
 trap release_session_lock EXIT
 
 acquire_session_lock
+
+# ── Validate session state (under lock) ──
+CURRENT_PHASE=$(jq -r '.phase' "$SESSION_FILE")
+CURRENT_MODE=$(jq -r '.mode' "$SESSION_FILE")
+GATE_UPPER="${GATE_LOWER^^}"
+
+if [[ "$CURRENT_MODE" != "HIVE" ]]; then
+  echo "ERROR: Session not in HIVE mode (current: ${CURRENT_MODE}). Marker creation blocked." >&2
+  exit 1
+fi
+
+if [[ "$CURRENT_PHASE" != "$GATE_UPPER" ]]; then
+  echo "ERROR: Phase mismatch. Current: ${CURRENT_PHASE}, Gate: ${GATE_UPPER}" >&2
+  exit 1
+fi
+
+# ── Consensus gates require evidence ──
+if [[ "$GATE_LOWER" == "p4" ]]; then
+  VALIDATE_SCRIPT="scripts/validate-phase5-entry.sh"
+  if [[ ! -f "$VALIDATE_SCRIPT" ]]; then
+    echo "ERROR: ${VALIDATE_SCRIPT} not found. Phase 5 entry validation is mandatory." >&2
+    exit 1
+  fi
+  echo "Running Phase 5 entry validation..."
+  if ! bash "$VALIDATE_SCRIPT"; then
+    echo "ERROR: Phase 5 entry validation failed" >&2
+    exit 1
+  fi
+fi
+
+# ── G2 requires evidence (SPEC hash) ──
+if [[ "$GATE_LOWER" == "g2" ]]; then
+  if [[ -z "$EVIDENCE_FILE" ]] || [[ ! -r "$EVIDENCE_FILE" ]]; then
+    echo "ERROR: G2 requires --evidence-file to record the SPEC hash" >&2
+    exit 1
+  fi
+fi
+
+if [[ "$GATE_LOWER" =~ ^(g3|p4)$ ]] && [[ -z "$EVIDENCE_FILE" ]]; then
+  echo "WARNING: Consensus gate ${GATE_UPPER} without --evidence-file" >&2
+fi
+
+# ── Create marker ──
+TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+EVIDENCE_HASH=""
+
+# Use sha256sum or shasum as fallback (macOS compatibility)
+hash_cmd() {
+  if command -v sha256sum &>/dev/null; then
+    sha256sum "$1" | cut -d' ' -f1
+  elif command -v shasum &>/dev/null; then
+    shasum -a 256 "$1" | cut -d' ' -f1
+  else
+    echo "none"
+  fi
+}
+
+if [[ -n "$EVIDENCE_FILE" ]] && [[ -r "$EVIDENCE_FILE" ]]; then
+  EVIDENCE_HASH=$(hash_cmd "$EVIDENCE_FILE")
+fi
+
+cat > "${STATE_DIR}/${MARKER_NAME}" <<MARKER
+timestamp: ${TIMESTAMP}
+gate: ${GATE_UPPER}
+evidence_hash: ${EVIDENCE_HASH:-none}
+team_id: ${TEAM_ID:-none}
+MARKER
+
+echo "✓ Marker created: ${STATE_DIR}/${MARKER_NAME}"
 
 # ── Update session.json ──
 NEXT_PHASE="${GATE_NEXT_PHASE[$GATE_LOWER]}"

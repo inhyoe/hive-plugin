@@ -146,15 +146,21 @@ export function updateSession(stateDir, mutator) {
     }
 }
 export function createSession(stateDir) {
-    const session = {
-        mode: 'HIVE',
-        phase: 'G1',
-        completedGates: [],
-        agentSpawns: [],
-        startedAt: new Date().toISOString(),
-    };
-    writeSession(stateDir, session);
-    return session;
+    acquireLock(stateDir);
+    try {
+        const session = {
+            mode: 'HIVE',
+            phase: 'G1',
+            completedGates: [],
+            agentSpawns: [],
+            startedAt: new Date().toISOString(),
+        };
+        writeSession(stateDir, session);
+        return session;
+    }
+    finally {
+        releaseLock(stateDir);
+    }
 }
 export function advancePhase(stateDir) {
     return updateSession(stateDir, (session) => {

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, existsSync, readdirSync, readFileSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, existsSync, readdirSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
@@ -134,8 +135,8 @@ describe('Session state manager', () => {
       createSession(stateDir);
       // Simulate stale lock with a PID that doesn't exist
       mkdirSync(join(stateDir, 'session.lock'));
-      const staleInfo = JSON.stringify({ pid: 999999999, startedAt: new Date().toISOString(), host: require('os').hostname() });
-      require('fs').writeFileSync(join(stateDir, 'session.lock', 'info.json'), staleInfo);
+      const staleInfo = JSON.stringify({ pid: 999999999, startedAt: new Date().toISOString(), host: hostname() });
+      writeFileSync(join(stateDir, 'session.lock', 'info.json'), staleInfo);
 
       const updated = advancePhase(stateDir);
       expect(updated.phase).toBe('G2');
