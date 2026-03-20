@@ -1,0 +1,46 @@
+{
+  "_comment": "Add these hooks to .claude/settings.json. Merge with existing hooks, do not replace.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node hooks/enforcer/dist/index.js intent-gate"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node hooks/enforcer/dist/index.js phase-guard"
+          }
+        ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node hooks/enforcer/dist/index.js agent-dispatcher"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node hooks/enforcer/dist/index.js agent-tracker"
+          }
+        ]
+      }
+    ]
+  }
+}
