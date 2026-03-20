@@ -162,6 +162,7 @@ export const useHiveStore = create<HiveState>((set) => ({
             eventLog,
             sessionId: event.sessionId,
             lead: { ...state.lead, status: 'idle' },
+            workers: {},
           };
         default:
           return { eventLog };

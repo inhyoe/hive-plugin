@@ -10,7 +10,7 @@ export function ResultsSummary() {
   const stats = useMemo(() => {
     const workerList = Object.values(workers);
     const completed = workerList.filter((w) => w.status === 'done' || w.status === 'error');
-    const passed = workerList.filter((w) => w.success === true);
+    const passed = workerList.filter((w) => w.success === true || (w.success === undefined && w.status === 'done'));
     const failed = workerList.filter((w) => w.success === false);
     const totalFiles = workerList.reduce((sum, w) => sum + w.changedFiles.length, 0);
 

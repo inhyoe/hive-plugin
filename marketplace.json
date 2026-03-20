@@ -6,13 +6,13 @@
   },
   "metadata": {
     "description": "Hive multi-agent orchestration plugin with real-time dashboard",
-    "version": "3.0.0"
+    "version": "3.1.0"
   },
   "plugins": [
     {
       "name": "hive",
       "description": "Multi-provider AI team orchestration with real-time dashboard and quality pipeline (Claude/Codex/Gemini)",
-      "version": "3.0.0",
+      "version": "3.1.0",
       "source": {
         "source": "url",
         "url": "https://github.com/inhyoe/hive-plugin.git"
