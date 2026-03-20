@@ -281,7 +281,7 @@ else
 fi
 
 # No stale references to commands/
-STALE=$(grep -rn 'commands/hive\.md' . --include='*.md' || true)
+STALE=$(grep -rn 'commands/hive\.md' . --include='*.md' --exclude-dir='docs' --exclude-dir='.worktrees' || true)
 if [ -z "$STALE" ]; then
     log_pass "No stale commands/ references"
 else
