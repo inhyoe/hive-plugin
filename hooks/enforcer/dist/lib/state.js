@@ -36,25 +36,37 @@ function tryReapStaleLock(lockDir) {
                 unlinkSync(infoPath);
             }
             catch { /* ignore */ }
-            rmdirSync(lockDir);
-            return true;
+            try {
+                rmdirSync(lockDir);
+                return true;
+            }
+            catch {
+                return false;
+            }
         }
         if (age > STALE_LOCK_THRESHOLD_MS) {
             try {
                 unlinkSync(infoPath);
             }
             catch { /* ignore */ }
-            rmdirSync(lockDir);
-            return true;
+            try {
+                rmdirSync(lockDir);
+                return true;
+            }
+            catch {
+                return false;
+            }
         }
     }
     catch {
         // info.json missing or unreadable — treat as stale
         try {
             rmdirSync(lockDir);
+            return true;
         }
-        catch { /* ignore */ }
-        return true;
+        catch {
+            return false;
+        }
     }
     return false;
 }

@@ -116,8 +116,9 @@ acquire_session_lock() {
     fi
     sleep "0.0$(( RANDOM % 50 + 50 ))"
   done
-  echo "{\"pid\":$$,\"startedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"host\":\"$(hostname)\"}" > "$LOCK_INFO"
+  # Set LOCK_ACQUIRED immediately so EXIT trap cleans up even if info.json write fails
   LOCK_ACQUIRED=1
+  echo "{\"pid\":$$,\"startedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"host\":\"$(hostname)\"}" > "$LOCK_INFO" || true
 }
 
 release_session_lock() {
@@ -184,12 +185,20 @@ hash_cmd() {
   elif command -v shasum &>/dev/null; then
     shasum -a 256 "$1" | cut -d' ' -f1
   else
-    echo "none"
+    echo "ERROR: No SHA-256 tool found (need sha256sum or shasum)" >&2
+    return 1
   fi
 }
 
 if [[ -n "$EVIDENCE_FILE" ]] && [[ -r "$EVIDENCE_FILE" ]]; then
   EVIDENCE_HASH=$(hash_cmd "$EVIDENCE_FILE")
+  if [[ $? -ne 0 ]] || [[ -z "$EVIDENCE_HASH" ]]; then
+    if [[ "$GATE_LOWER" == "g2" ]]; then
+      echo "ERROR: G2 evidence hash computation failed" >&2
+      exit 1
+    fi
+    EVIDENCE_HASH=""
+  fi
 fi
 
 cat > "${STATE_DIR}/${MARKER_NAME}" <<MARKER
