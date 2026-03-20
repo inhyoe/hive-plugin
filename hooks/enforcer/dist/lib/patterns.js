@@ -33,13 +33,18 @@ export function extractCreateMarkerGate(command) {
     return null;
 }
 export function isGitCommit(command) {
-    return /\bgit\s+commit\b/.test(command);
+    // Match: git commit, git -c key=val commit, git --no-pager commit, etc.
+    return /\bgit\b.*\bcommit\b/.test(command);
 }
-export function isHiveStateWrite(command) {
-    if (!/\.hive-state/.test(command))
+export function isHiveStateWrite(command, stateDir) {
+    // Check both hardcoded .hive-state and custom stateDir
+    const stateDirPattern = stateDir && stateDir !== '.hive-state'
+        ? new RegExp(`\\.hive-state|${stateDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`)
+        : /\.hive-state/;
+    if (!stateDirPattern.test(command))
         return false;
-    // Write indicators: redirects, destructive/write commands, interpreters
-    return /[>]|\btee\b|\b(cp|mv|rm|touch|chmod|chown|dd|ln|install|sed|perl|python|python3|ruby|node)\s/.test(command);
+    // Write indicators: redirects, destructive/write commands, interpreters, mkdir
+    return /[>]|\btee\b|\b(cp|mv|rm|touch|chmod|chown|dd|ln|install|sed|perl|python|python3|ruby|node|mkdir)\s/.test(command);
 }
 export function hasShellChaining(command) {
     // Matches: &&, ||, ;, |, & (background), newlines, backticks, $()

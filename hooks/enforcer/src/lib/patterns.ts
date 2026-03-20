@@ -35,13 +35,18 @@ export function extractCreateMarkerGate(command: string): string | null {
 }
 
 export function isGitCommit(command: string): boolean {
-  return /\bgit\s+commit\b/.test(command);
+  // Match: git commit, git -c key=val commit, git --no-pager commit, etc.
+  return /\bgit\b.*\bcommit\b/.test(command);
 }
 
-export function isHiveStateWrite(command: string): boolean {
-  if (!/\.hive-state/.test(command)) return false;
-  // Write indicators: redirects, destructive/write commands, interpreters
-  return /[>]|\btee\b|\b(cp|mv|rm|touch|chmod|chown|dd|ln|install|sed|perl|python|python3|ruby|node)\s/.test(command);
+export function isHiveStateWrite(command: string, stateDir?: string): boolean {
+  // Check both hardcoded .hive-state and custom stateDir
+  const stateDirPattern = stateDir && stateDir !== '.hive-state'
+    ? new RegExp(`\\.hive-state|${stateDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`)
+    : /\.hive-state/;
+  if (!stateDirPattern.test(command)) return false;
+  // Write indicators: redirects, destructive/write commands, interpreters, mkdir
+  return /[>]|\btee\b|\b(cp|mv|rm|touch|chmod|chown|dd|ln|install|sed|perl|python|python3|ruby|node|mkdir)\s/.test(command);
 }
 
 export function hasShellChaining(command: string): boolean {

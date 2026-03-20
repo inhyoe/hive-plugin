@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, renameSync, unlinkSync, mkdirSync, rmdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, renameSync, unlinkSync, mkdirSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { hostname } from 'node:os';
 import { getNextPhase } from './phases.js';
@@ -8,7 +8,7 @@ const LOCK_INFO_FILE = 'info.json';
 const LOCK_TIMEOUT_MS = 3000;
 const LOCK_RETRY_MIN_MS = 50;
 const LOCK_RETRY_MAX_MS = 100;
-const STALE_LOCK_THRESHOLD_MS = 10000;
+const STALE_LOCK_THRESHOLD_MS = 30000;
 function sessionPath(stateDir) {
     return join(stateDir, SESSION_FILE);
 }
@@ -31,26 +31,20 @@ function tryReapStaleLock(lockDir) {
         const info = JSON.parse(raw);
         const age = Date.now() - new Date(info.startedAt).getTime();
         const sameHost = info.host === hostname();
+        // PID check takes priority: dead process = definitely stale
         if (sameHost && !isProcessAlive(info.pid)) {
             try {
-                unlinkSync(infoPath);
-            }
-            catch { /* ignore */ }
-            try {
-                rmdirSync(lockDir);
+                rmSync(lockDir, { recursive: true, force: true });
                 return true;
             }
             catch {
                 return false;
             }
         }
+        // Age check only if PID is alive (slow operation) or different host
         if (age > STALE_LOCK_THRESHOLD_MS) {
             try {
-                unlinkSync(infoPath);
-            }
-            catch { /* ignore */ }
-            try {
-                rmdirSync(lockDir);
+                rmSync(lockDir, { recursive: true, force: true });
                 return true;
             }
             catch {
@@ -59,9 +53,9 @@ function tryReapStaleLock(lockDir) {
         }
     }
     catch {
-        // info.json missing or unreadable — treat as stale
+        // info.json missing/unreadable/corrupt — treat as stale, force-clean
         try {
-            rmdirSync(lockDir);
+            rmSync(lockDir, { recursive: true, force: true });
             return true;
         }
         catch {
@@ -103,11 +97,7 @@ function acquireLock(stateDir) {
 function releaseLock(stateDir) {
     const lockDir = lockPath(stateDir);
     try {
-        unlinkSync(join(lockDir, LOCK_INFO_FILE));
-    }
-    catch { /* ignore */ }
-    try {
-        rmdirSync(lockDir);
+        rmSync(lockDir, { recursive: true, force: true });
     }
     catch { /* ignore */ }
 }

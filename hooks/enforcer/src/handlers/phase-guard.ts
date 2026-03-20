@@ -82,7 +82,7 @@ export function handlePhaseGuard(command: string, stateDir: string): HandlerResu
   }
 
   // Step 3: Block direct writes to .hive-state/ (FSM tampering)
-  if (isHiveStateWrite(command)) {
+  if (isHiveStateWrite(command, stateDir)) {
     return {
       exitCode: 2,
       message: 'BLOCKED: Direct write to .hive-state/ detected. Use scripts/create-marker.sh for state transitions.',
