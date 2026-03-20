@@ -210,6 +210,9 @@ bash install.sh
 # Preview without changes
 bash install.sh --dry-run
 
+# Install to a custom Claude home
+bash install.sh --claude-home /path/to/.claude
+
 # Uninstall
 bash install.sh --uninstall
 ```

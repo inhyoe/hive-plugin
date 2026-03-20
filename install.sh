@@ -148,8 +148,8 @@ safe_remove_symlink() {
   local actual_target
   actual_target="$(readlink -f "$link_path" 2>/dev/null || true)"
 
-  # Only remove if it points into our repo
-  if [[ "$actual_target" == "$REPO_ROOT"* ]]; then
+  # Only remove if it points into our repo (exact match or child path)
+  if [[ "$actual_target" == "$REPO_ROOT"/* || "$actual_target" == "$REPO_ROOT" ]]; then
     if $DRY_RUN; then
       dry_info "remove symlink $link_path"
     else
@@ -294,6 +294,7 @@ install_hooks() {
 
     # Add each tagged entry
     while IFS= read -r entry; do
+      [[ -z "$entry" ]] && continue
       current_settings="$(echo "$current_settings" | jq \
         --arg et "$event_type" \
         --argjson entry "$entry" \

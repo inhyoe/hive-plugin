@@ -210,6 +210,9 @@ bash install.sh
 # 변경 없이 미리보기
 bash install.sh --dry-run
 
+# 사용자 지정 경로에 설치
+bash install.sh --claude-home /path/to/.claude
+
 # 제거
 bash install.sh --uninstall
 ```
