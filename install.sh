@@ -68,6 +68,22 @@ while [[ $# -gt 0 ]]; do
 done
 
 ###############################################################################
+# Pre-checks
+###############################################################################
+
+if [[ ! -f "$REPO_ROOT/.claude-plugin/plugin.json" ]]; then
+  echo "ERROR: Must run from hive-plugin repo root (.claude-plugin/plugin.json not found)" >&2
+  exit 1
+fi
+
+if ! command -v jq &>/dev/null; then
+  echo "ERROR: jq is required. Install with: sudo apt install jq" >&2
+  exit 1
+fi
+
+VERSION="$(jq -r '.version' "$REPO_ROOT/.claude-plugin/plugin.json")"
+
+###############################################################################
 # Helpers
 ###############################################################################
 
@@ -332,14 +348,20 @@ main() {
     uninstall_hooks
     info "Uninstall complete."
   else
-    info "Installing hive-plugin to $CLAUDE_HOME..."
+    info "Installing hive-plugin v${VERSION} to $CLAUDE_HOME..."
     install_skills
     cleanup_legacy
     install_scripts_symlink
     install_dashboard_symlink
     install_hooks
     install_dashboard_deps
-    info "Install complete."
+    info "Hive plugin v${VERSION} installed successfully!"
+    info ""
+    info "Components:"
+    info "  Skills:    $CLAUDE_HOME/skills/hive (+ 5 sub-skills)"
+    info "  Scripts:   $CLAUDE_HOME/hive-scripts"
+    info "  Dashboard: $CLAUDE_HOME/hive-dashboard"
+    info "  Hooks:     merged into $CLAUDE_HOME/settings.json"
   fi
 }
 
