@@ -491,10 +491,56 @@ Phase 5 실패 시 **동일 프롬프트 재시도 금지**. 원인 분류 후 �
 모든 Wave 완료 후: Claude 에이전트 SendMessage(shutdown), CCB idle_timeout 종료.
 최종 출력: `| 팀 | 상태 | 변경 파일 | 합의 라운드 |` + 총 변경 요약.
 
+## Phase 6: Auto Review (Final Quality Gate)
+
+<hard_gate rule="PHASE6_ENTRY">
+Phase 5 모든 Wave 완료 + G7 통과 + git status clean. Non-negotiable.
+</hard_gate>
+
+Phase 5 완료 후 독립 리뷰어를 통한 최종 품질 검증.
+변경 파일을 `.hive-state/review/`에 수집하여 리뷰어가 직접 읽는 방식 — diff 줄 수 제한 없음.
+
+### 6-1. 실행
+
+```bash
+RESULT=$(bun run $HIVE_PLUGIN_DIR/skills/auto-review-loop/scripts/phase6-orchestrator.ts --base {base_branch})
+```
+
+`entryValid: false` → Phase 6 진입 실패, 오류 보고 후 중단.
+`error: "no changed files"` → Phase 6 skip.
+
+### 6-2. 리뷰어 분기
+
+RESULT의 `reviewer` 필드에 따라:
+
+| reviewer | 실행 방식 |
+|----------|----------|
+| `codex` | `CCB_CALLER=claude ask codex "$PROMPT"` → Async Guardrail 준수 |
+| `claude-team` | `Agent(description="Phase6-Review", prompt="$PROMPT", subagent_type="general-purpose", isolation="worktree")` |
+
+Codex 미연결 시 skip이 아닌 **Claude Team 자동 생성**으로 대체.
+
+### 6-3. 리뷰 루프
+
+리뷰 결과 → `review-parser.ts` → `state-manager.ts` (최대 5회).
+
+| 결과 | 마커 | 후속 |
+|------|------|------|
+| NO ISSUES FOUND | `[AUTO REVIEW PASSED — round:{N} reviewer:{codex\|claude-team}]` | §5-6 종료 진행 |
+| 이슈 수정 완료 | `[AUTO REVIEW PASSED — round:{N} reviewer:{codex\|claude-team}]` | §5-6 종료 진행 |
+| 동일 이슈 반복 | `[AUTO REVIEW ESCALATED — issues:{count}]` | 사용자에게 보고 |
+| max iterations | `[AUTO REVIEW ESCALATED — issues:{count}]` | 사용자에게 보고 |
+
+### 6-4. Skip 조건
+
+사용자가 `--no-review` 옵션 지정 시에만 Phase 6 skip.
+
+---
+
 ### 5-6. 대시보드 이벤트 발행 + 종료
 
-```
-Phase 5 완료 후:
-  1. emit session.summary → 2. archive-session.sh → 3. hive-launcher.sh stop
+```text
+Phase 5+6 완료 후:
+  1. emit session.summary (Phase 6 결과 포함) → 2. archive-session.sh → 3. hive-launcher.sh stop
   (모든 호출에 || true — 실패해도 워크플로우 미중단)
 ```
