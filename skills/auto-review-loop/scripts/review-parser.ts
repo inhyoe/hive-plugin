@@ -25,9 +25,11 @@ export function parseReview(input: string): ParsedReview {
     return { hasIssues: true, issues, raw };
   }
 
-  // Check for explicit "NO ISSUES FOUND" sentinel
-  const noIssuesSentinel = /NO\s+ISSUES\s+FOUND/i;
-  if (noIssuesSentinel.test(input)) {
+  // Check for explicit "NO ISSUES FOUND" sentinel — must appear as its own line (trimmed)
+  const hasStandaloneSentinel = input.split("\n").some(
+    (line) => /^\s*NO\s+ISSUES\s+FOUND\s*$/i.test(line)
+  );
+  if (hasStandaloneSentinel) {
     return { hasIssues: false, issues: [], raw };
   }
 
