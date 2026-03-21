@@ -11,6 +11,7 @@ import {
   extractPromptFromStdin,
   extractAgentInfoFromStdin,
   isCreateMarkerCall,
+  isBashSuccess,
 } from './lib/patterns.js';
 
 const STATE_DIR = process.env.HIVE_STATE_DIR ?? '.hive-state';
@@ -123,9 +124,9 @@ async function main(): Promise<void> {
     }
 
     case 'phase-advance': {
-      // Called from PostToolUse(Bash) — only act after create-marker.sh
+      // Called from PostToolUse(Bash) — only act after successful create-marker.sh
       const cmd = extractCommandFromStdin(stdin);
-      if (cmd && isCreateMarkerCall(cmd)) {
+      if (cmd && isCreateMarkerCall(cmd) && isBashSuccess(stdin)) {
         recordPendingReadsAfterMarker(STATE_DIR);
       }
       break;

@@ -6,7 +6,7 @@ import { handleMarkerValidator, extractMarkerInputFromStdin } from './handlers/m
 import { handleConsensusValidator, extractConsensusInputFromStdin } from './handlers/consensus-validator.js';
 import { handleReadGatePre, handleReadGatePost } from './handlers/read-gate.js';
 import { recordPendingReadsAfterMarker } from './handlers/phase-guard.js';
-import { extractCommandFromStdin, extractPromptFromStdin, extractAgentInfoFromStdin, isCreateMarkerCall, } from './lib/patterns.js';
+import { extractCommandFromStdin, extractPromptFromStdin, extractAgentInfoFromStdin, isCreateMarkerCall, isBashSuccess, } from './lib/patterns.js';
 const STATE_DIR = process.env.HIVE_STATE_DIR ?? '.hive-state';
 function readStdin() {
     return new Promise((resolve) => {
@@ -112,9 +112,9 @@ async function main() {
             break;
         }
         case 'phase-advance': {
-            // Called from PostToolUse(Bash) — only act after create-marker.sh
+            // Called from PostToolUse(Bash) — only act after successful create-marker.sh
             const cmd = extractCommandFromStdin(stdin);
-            if (cmd && isCreateMarkerCall(cmd)) {
+            if (cmd && isCreateMarkerCall(cmd) && isBashSuccess(stdin)) {
                 recordPendingReadsAfterMarker(STATE_DIR);
             }
             break;

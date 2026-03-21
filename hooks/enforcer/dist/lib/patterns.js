@@ -50,6 +50,17 @@ export function hasShellChaining(command) {
     // Matches: &&, ||, ;, |, & (background), newlines, backticks, $()
     return /&&|\|\||[;|&`\n]|\$\(/.test(command);
 }
+export function isBashSuccess(stdin) {
+    try {
+        const parsed = JSON.parse(stdin);
+        const exitCode = parsed?.tool_result?.exit_code;
+        // Treat missing exit_code as success (conservative — don't block on schema gaps)
+        return exitCode === undefined || exitCode === 0;
+    }
+    catch {
+        return false;
+    }
+}
 export function extractCommandFromStdin(stdin) {
     try {
         const parsed = JSON.parse(stdin);
