@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { parseDiffOutput, buildDiffCommand } from "../diff-collector";
+import { parseDiffOutput, buildDiffCommand, collectFiles } from "../diff-collector";
+import { mkdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
 
 describe("parseDiffOutput", () => {
   test("empty string → empty true, tooLarge false", () => {
@@ -44,5 +45,21 @@ describe("collectDiff error handling", () => {
     const result = collectDiff("nonexistent-branch-xyz-9999");
     expect(result.empty).toBe(false);
     expect(result.error).toBeTruthy();
+  });
+});
+
+describe("collectFiles", () => {
+  test("invalid base branch returns error", () => {
+    const result = collectFiles("nonexistent-branch-xyz-9999", "/tmp/test-review-dir");
+    expect(result.error).toBeTruthy();
+    expect(result.files).toEqual([]);
+  });
+
+  test("result has correct shape", () => {
+    const result = collectFiles("nonexistent-branch-xyz-9999", "/tmp/test-review-dir");
+    expect(result).toHaveProperty("files");
+    expect(result).toHaveProperty("reviewDir");
+    expect(result).toHaveProperty("fileCount");
+    expect(result.reviewDir).toBe("/tmp/test-review-dir");
   });
 });

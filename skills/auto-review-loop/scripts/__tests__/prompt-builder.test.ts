@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildReviewPrompt, buildVerifyPrompt } from "../prompt-builder";
+import { buildReviewPrompt, buildVerifyPrompt, buildFileReviewPrompt, buildClaudeTeamPrompt } from "../prompt-builder";
 import type { ReviewIssue } from "../lib/types";
 
 describe("buildReviewPrompt", () => {
@@ -44,6 +44,31 @@ describe("buildVerifyPrompt", () => {
     const prompt = buildVerifyPrompt([], "some fix diff");
     expect(prompt).toContain("[VERIFY REQUEST]");
     expect(prompt).toContain("--- FIX DIFF START ---");
+  });
+});
+
+describe("buildFileReviewPrompt", () => {
+  test("lists files and contains REVIEW REQUEST", () => {
+    const prompt = buildFileReviewPrompt(["src/a.ts", "src/b.ts"]);
+    expect(prompt).toContain("[REVIEW REQUEST]");
+    expect(prompt).toContain("src/a.ts");
+    expect(prompt).toContain("src/b.ts");
+    expect(prompt).toContain("Read");
+    expect(prompt).toContain("HIGH SIGNAL");
+  });
+
+  test("handles empty file list", () => {
+    const prompt = buildFileReviewPrompt([]);
+    expect(prompt).toContain("[REVIEW REQUEST]");
+  });
+});
+
+describe("buildClaudeTeamPrompt", () => {
+  test("includes review dir paths", () => {
+    const prompt = buildClaudeTeamPrompt(["a.ts", "b.ts"], ".hive-state/review");
+    expect(prompt).toContain(".hive-state/review/a.ts");
+    expect(prompt).toContain(".hive-state/review/b.ts");
+    expect(prompt).toContain("독립 코드 리뷰어");
   });
 });
 

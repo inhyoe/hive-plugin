@@ -32,3 +32,19 @@ export interface StateCheckResult {
   reason: string;
   iteration: number;
 }
+
+export interface FileCollectResult {
+  files: string[];
+  reviewDir: string;
+  fileCount: number;
+  error?: string;
+}
+
+export interface Phase6Result {
+  reviewer: "codex" | "claude-team";
+  files: string[];
+  reviewDir: string;
+  prompt: string;
+  entryValid: boolean;
+  error?: string;
+}
