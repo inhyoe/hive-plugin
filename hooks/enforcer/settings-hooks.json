@@ -60,6 +60,24 @@
         ]
       },
       {
+        "matcher": "Bash|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node hooks/enforcer/dist/index.js marker-validator"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node hooks/enforcer/dist/index.js consensus-validator"
+          }
+        ]
+      },
+      {
         "matcher": "Read",
         "hooks": [
           {
