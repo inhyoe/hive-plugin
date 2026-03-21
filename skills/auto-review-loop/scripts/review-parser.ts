@@ -27,7 +27,7 @@ export function parseReview(input: string): ParsedReview {
 
   // Check for explicit "NO ISSUES FOUND" sentinel
   // Must be the entire trimmed response to prevent false negatives from quoted/template text
-  if (/^\s*NO\s+ISSUES\s+FOUND\s*$/i.test(input.trim())) {
+  if (/^NO ISSUES FOUND$/i.test(input.trim())) {
     return { hasIssues: false, issues: [], raw };
   }
 
