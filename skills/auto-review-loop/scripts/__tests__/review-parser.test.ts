@@ -9,10 +9,10 @@ describe("parseReview", () => {
     expect(result.raw).toBe("NO ISSUES FOUND");
   });
 
-  test("NO ISSUES FOUND with trailing text → same result", () => {
+  test("NO ISSUES FOUND with trailing text → malformed (not exact match)", () => {
     const result = parseReview("NO ISSUES FOUND\n\ntrailing text here");
-    expect(result.hasIssues).toBe(false);
-    expect(result.issues).toEqual([]);
+    expect(result.hasIssues).toBe(true);
+    expect(result.issues[0].file).toBe("REVIEW");
   });
 
   test("single issue parsed correctly", () => {
@@ -82,9 +82,16 @@ describe("parseReview", () => {
     expect(result.issues[0].file).toBe("src/main.ts");
   });
 
-  test("exact sentinel on its own line without issues → hasIssues false", () => {
+  test("sentinel embedded in other text → malformed (not exact match)", () => {
     const input = "Some preamble\nNO ISSUES FOUND\nSome trailing";
     const result = parseReview(input);
+    expect(result.hasIssues).toBe(true);
+    expect(result.issues[0].file).toBe("REVIEW");
+  });
+
+  test("NO ISSUES FOUND with whitespace padding → hasIssues false", () => {
+    const result = parseReview("  NO ISSUES FOUND  \n");
     expect(result.hasIssues).toBe(false);
+    expect(result.issues).toEqual([]);
   });
 });

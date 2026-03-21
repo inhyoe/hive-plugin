@@ -25,11 +25,9 @@ export function parseReview(input: string): ParsedReview {
     return { hasIssues: true, issues, raw };
   }
 
-  // Check for explicit "NO ISSUES FOUND" sentinel — must appear as its own line (trimmed)
-  const hasStandaloneSentinel = input.split("\n").some(
-    (line) => /^\s*NO\s+ISSUES\s+FOUND\s*$/i.test(line)
-  );
-  if (hasStandaloneSentinel) {
+  // Check for explicit "NO ISSUES FOUND" sentinel
+  // Must be the entire trimmed response to prevent false negatives from quoted/template text
+  if (/^\s*NO\s+ISSUES\s+FOUND\s*$/i.test(input.trim())) {
     return { hasIssues: false, issues: [], raw };
   }
 
