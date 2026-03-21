@@ -5,6 +5,7 @@ export declare function extractCreateMarkerGate(command: string): string | null;
 export declare function isGitCommit(command: string): boolean;
 export declare function isHiveStateWrite(command: string, stateDir?: string): boolean;
 export declare function hasShellChaining(command: string): boolean;
+export declare function isBashSuccess(stdin: string): boolean;
 export declare function extractCommandFromStdin(stdin: string): string | null;
 export declare function extractPromptFromStdin(stdin: string): string | null;
 export declare function extractAgentInfoFromStdin(stdin: string): AgentInfo | null;

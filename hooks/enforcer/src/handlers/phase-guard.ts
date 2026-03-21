@@ -1,5 +1,7 @@
 import { readSession } from '../lib/state.js';
 import { Phase, phaseIndex } from '../lib/phases.js';
+import { PHASE_CONTEXT_MAP } from '../lib/phase-context-map.js';
+import { writePendingReads } from '../lib/pending-reads.js';
 import {
   isDirectMarkerCreation,
   isCreateMarkerCall,
@@ -100,4 +102,22 @@ export function handlePhaseGuard(command: string, stateDir: string): HandlerResu
   }
 
   return { exitCode: 0 };
+}
+
+/**
+ * Called from PostToolUse(Bash) after create-marker.sh succeeds.
+ * Re-reads session to discover new phase, then writes pending-reads
+ * for the next phase's required detail files.
+ */
+export function recordPendingReadsAfterMarker(stateDir: string): void {
+  const result = readSession(stateDir);
+  if (result.status !== 'ok' || result.session.mode !== 'HIVE') return;
+
+  // After create-marker.sh advances the phase, session.phase is already
+  // the newly entered phase. Write reads for THIS phase (not the next one).
+  const currentPhase = result.session.phase;
+  const requiredFiles = PHASE_CONTEXT_MAP[currentPhase] ?? [];
+  if (requiredFiles.length > 0) {
+    writePendingReads(stateDir, requiredFiles);
+  }
 }

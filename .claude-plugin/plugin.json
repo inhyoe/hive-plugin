@@ -1,6 +1,6 @@
 {
   "name": "hive",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Multi-provider AI team orchestration with real-time dashboard and quality pipeline (Claude/Codex/Gemini). Brainstorm, analyze codebase, decompose into teams, reach consensus, then execute in parallel waves with live visualization.",
   "author": {
     "name": "inhyoe"

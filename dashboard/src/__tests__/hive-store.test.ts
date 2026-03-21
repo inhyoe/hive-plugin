@@ -292,12 +292,17 @@ describe('useHiveStore', () => {
     expect(state.eventLog.at(-1)).toEqual(event);
   });
 
-  it('sets lead idle and sessionId on session.summary', () => {
+  it('sets lead idle, clears workers, and preserves sessionId on session.summary', () => {
+    createTeam('T1');
+    createTeam('T2');
+
     emit({
       ...baseEvent,
       type: 'phase.transition',
       payload: { phase: 5, status: 'enter' },
     } satisfies PhaseTransitionEvent);
+
+    expect(Object.keys(useHiveStore.getState().workers)).toHaveLength(2);
 
     const event = {
       ...baseEvent,
@@ -316,6 +321,7 @@ describe('useHiveStore', () => {
     const state = useHiveStore.getState();
     expect(state.lead.status).toBe('idle');
     expect(state.sessionId).toBe('session-1');
+    expect(state.workers).toEqual({});
     expect(state.eventLog.at(-1)).toEqual(event);
   });
 
