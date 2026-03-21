@@ -52,8 +52,8 @@ function areDuplicateIssues(
   if (prev.length === 0 || current.length === 0) return false;
   if (prev.length !== current.length) return false;
 
-  const prevSet = new Set(prev.map((i) => `${i.file}::${i.description}`));
-  return current.every((i) => prevSet.has(`${i.file}::${i.description}`));
+  const prevSet = new Set(prev.map((i) => `${i.file}:${i.line}::${i.description}`));
+  return current.every((i) => prevSet.has(`${i.file}:${i.line}::${i.description}`));
 }
 
 export function getStatePath(branch: string): string {

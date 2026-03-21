@@ -35,6 +35,7 @@ export interface StateCheckResult {
 
 export interface FileCollectResult {
   files: string[];
+  deletedFiles?: string[];
   reviewDir: string;
   fileCount: number;
   error?: string;

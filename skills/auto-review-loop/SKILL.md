@@ -198,6 +198,36 @@ NO ISSUES FOUND
 NO ISSUES FOUND
 ```
 
+## Phase 6 모드 (Hive 통합)
+
+hive-workflow Phase 5 완료 후 자동 호출되는 모드.
+standalone 모드와 다른 점:
+
+### 파일 기반 리뷰
+
+diff를 프롬프트에 인라인하지 않고, 변경 파일을 `.hive-state/review/`에 수집.
+리뷰어가 직접 파일을 Read로 읽어 검토. **줄 수 제한 없음**.
+
+```bash
+bun run ${CLAUDE_SKILL_DIR}/scripts/phase6-orchestrator.ts --base {base_branch} --max 5
+```
+
+출력 JSON의 `reviewer` 필드로 실행 방식 결정.
+
+### 리뷰어 선택
+
+| 조건 | 리뷰어 | 실행 |
+|------|--------|------|
+| Codex 연결됨 | codex | `ask codex "{prompt}"` |
+| Codex 미연결 | claude-team | `Agent(description="Phase6-Review", prompt="{prompt}", isolation="worktree")` |
+
+Codex 미연결 시 **중단하지 않고** Claude Team을 생성하여 리뷰 수행.
+
+### 삭제된 파일 처리
+
+`diff-collector.ts --mode files`는 삭제된 파일을 `deletedFiles` 필드로 분리.
+리뷰어에게는 존재하는 파일(`files`)만 전달.
+
 ## 종료 조건 요약
 
 | 조건 | 동작 |
@@ -205,9 +235,11 @@ NO ISSUES FOUND
 | `NO ISSUES FOUND` | Phase 4 → 완료, push 확인 |
 | 동일 이슈 2회 연속 | ⚠️ 중단, 목록 보고 |
 | max iterations 도달 | 🛑 중단, 잔여 이슈 보고 |
-| ccb-ping 실패 | ❌ 즉시 중단 |
+| ccb-ping 실패 (standalone) | ❌ 즉시 중단 |
+| ccb-ping 실패 (Phase 6) | Claude Team fallback |
 | diff 비어있음 | 변경사항 없음, 중단 |
-| diff 5000줄 초과 | 범위 초과, 중단 |
+| diff 5000줄 초과 (standalone) | 범위 초과, 중단 |
+| diff 5000줄 초과 (Phase 6) | 파일 기반이므로 제한 없음 |
 
 ## 규칙
 

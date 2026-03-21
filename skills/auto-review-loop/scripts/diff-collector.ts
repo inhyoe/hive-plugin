@@ -48,14 +48,21 @@ export function collectFiles(base: string, reviewDir: string = REVIEW_DIR): File
 
     mkdirSync(reviewDir, { recursive: true });
 
+    const copiedFiles: string[] = [];
+    const deletedFiles: string[] = [];
+
     for (const file of files) {
-      if (!existsSync(file)) continue;
+      if (!existsSync(file)) {
+        deletedFiles.push(file);
+        continue;
+      }
       const dest = join(reviewDir, file);
       mkdirSync(dirname(dest), { recursive: true });
       copyFileSync(file, dest);
+      copiedFiles.push(file);
     }
 
-    return { files, reviewDir, fileCount: files.length };
+    return { files: copiedFiles, deletedFiles, reviewDir, fileCount: copiedFiles.length };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     return { files: [], reviewDir, fileCount: 0, error: message };
