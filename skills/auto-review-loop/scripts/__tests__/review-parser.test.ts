@@ -41,11 +41,13 @@ describe("parseReview", () => {
     expect(result.issues[2].description).toBe("SQL injection risk");
   });
 
-  test("text without issues or NO ISSUES FOUND → hasIssues false", () => {
+  test("text without issues or sentinel → treated as malformed", () => {
     const input = "Everything looks good, no problems detected.";
     const result = parseReview(input);
-    expect(result.hasIssues).toBe(false);
-    expect(result.issues).toEqual([]);
+    expect(result.hasIssues).toBe(true);
+    expect(result.issues).toHaveLength(1);
+    expect(result.issues[0].file).toBe("REVIEW");
+    expect(result.issues[0].description).toContain("Malformed");
   });
 
   test("directory path with nested folders", () => {

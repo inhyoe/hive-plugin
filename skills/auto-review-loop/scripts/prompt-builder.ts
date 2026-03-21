@@ -179,7 +179,11 @@ if (import.meta.main) {
       console.error(`Failed to parse files JSON '${filesPath}': ${e instanceof Error ? e.message : e}`);
       process.exit(1);
     }
-    const files: string[] = Array.isArray(filesData) ? filesData : filesData.files ?? [];
+    const files: string[] = Array.isArray(filesData)
+      ? filesData
+      : (filesData && typeof filesData === "object" && "files" in filesData && Array.isArray((filesData as any).files))
+        ? (filesData as any).files
+        : [];
     console.log(buildClaudeTeamPrompt(files, reviewDir));
   } else {
     console.error("Unknown type: " + type);

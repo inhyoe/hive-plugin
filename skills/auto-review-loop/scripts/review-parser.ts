@@ -25,8 +25,19 @@ export function parseReview(input: string): ParsedReview {
     return { hasIssues: true, issues, raw };
   }
 
-  // No issues parsed — no actionable items
-  return { hasIssues: false, issues: [], raw };
+  // Check for explicit "NO ISSUES FOUND" sentinel
+  const noIssuesSentinel = /NO\s+ISSUES\s+FOUND/i;
+  if (noIssuesSentinel.test(input)) {
+    return { hasIssues: false, issues: [], raw };
+  }
+
+  // No sentinel and no parsed issues — malformed response, treat as uncertain
+  // Return hasIssues: true with a synthetic issue to prevent false pass
+  return {
+    hasIssues: true,
+    issues: [{ file: "REVIEW", line: 0, description: "Malformed reviewer response — could not parse issues or NO ISSUES FOUND sentinel" }],
+    raw,
+  };
 }
 
 // CLI
