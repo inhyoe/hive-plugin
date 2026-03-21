@@ -10,7 +10,7 @@ import {
   extractCommandFromStdin,
   extractPromptFromStdin,
   extractAgentInfoFromStdin,
-  isCreateMarkerExecution,
+  isCreateMarkerCall,
   isBashSuccess,
 } from './lib/patterns.js';
 
@@ -126,7 +126,7 @@ async function main(): Promise<void> {
     case 'phase-advance': {
       // Called from PostToolUse(Bash) — only act after successful create-marker.sh
       const cmd = extractCommandFromStdin(stdin);
-      if (cmd && isCreateMarkerExecution(cmd) && isBashSuccess(stdin)) {
+      if (cmd && isCreateMarkerCall(cmd) && isBashSuccess(stdin)) {
         recordPendingReadsAfterMarker(STATE_DIR);
       }
       break;

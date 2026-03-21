@@ -1,7 +1,6 @@
 import type { AgentInfo } from './types.js';
 export declare function isDirectMarkerCreation(command: string): boolean;
 export declare function isCreateMarkerCall(command: string): boolean;
-export declare function isCreateMarkerExecution(command: string): boolean;
 export declare function extractCreateMarkerGate(command: string): string | null;
 export declare function isGitCommit(command: string): boolean;
 export declare function isHiveStateWrite(command: string, stateDir?: string): boolean;
