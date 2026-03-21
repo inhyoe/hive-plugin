@@ -22,6 +22,8 @@ export type SessionReadResult = {
     status: 'parse_error';
     error: string;
 };
+export declare function acquireLock(stateDir: string): void;
+export declare function releaseLock(stateDir: string): void;
 export declare function readSession(stateDir: string): SessionReadResult;
 export declare function writeSession(stateDir: string, session: HiveSession): void;
 export declare function updateSession(stateDir: string, mutator: (session: HiveSession) => void): HiveSession;

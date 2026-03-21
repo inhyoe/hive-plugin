@@ -29,6 +29,15 @@
             "command": "node hooks/enforcer/dist/index.js agent-dispatcher"
           }
         ]
+      },
+      {
+        "matcher": "Bash|Agent|Write|Edit|Glob|Grep|NotebookEdit|WebFetch|WebSearch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node hooks/enforcer/dist/index.js read-gate-pre"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -38,6 +47,24 @@
           {
             "type": "command",
             "command": "node hooks/enforcer/dist/index.js agent-tracker"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node hooks/enforcer/dist/index.js phase-advance"
+          }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node hooks/enforcer/dist/index.js read-gate-post"
           }
         ]
       }

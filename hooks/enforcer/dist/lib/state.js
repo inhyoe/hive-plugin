@@ -64,7 +64,7 @@ function tryReapStaleLock(lockDir) {
     }
     return false;
 }
-function acquireLock(stateDir) {
+export function acquireLock(stateDir) {
     if (!existsSync(stateDir)) {
         mkdirSync(stateDir, { recursive: true });
     }
@@ -94,7 +94,7 @@ function acquireLock(stateDir) {
         }
     }
 }
-function releaseLock(stateDir) {
+export function releaseLock(stateDir) {
     const lockDir = lockPath(stateDir);
     try {
         rmSync(lockDir, { recursive: true, force: true });
