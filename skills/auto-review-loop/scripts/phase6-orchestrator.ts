@@ -32,7 +32,7 @@ function checkCodexAvailable(): boolean {
 if (import.meta.main) {
   const args = process.argv.slice(2);
   const baseIdx = args.indexOf("--base");
-  const base = baseIdx !== -1 ? args[baseIdx + 1] : "main";
+  const base = baseIdx !== -1 && args[baseIdx + 1] && !args[baseIdx + 1].startsWith("--") ? args[baseIdx + 1] : "main";
 
   // 1. Entry validation
   const entry = validateEntry();

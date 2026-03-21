@@ -89,7 +89,8 @@ if (import.meta.main) {
 
     const branch = branchIdx !== -1 ? args[branchIdx + 1] : "";
     const base = baseIdx !== -1 ? args[baseIdx + 1] : "main";
-    const max = maxIdx !== -1 ? parseInt(args[maxIdx + 1], 10) : 10;
+    const parsed = maxIdx !== -1 ? parseInt(args[maxIdx + 1], 10) : 10;
+    const max = Number.isNaN(parsed) || parsed <= 0 ? 10 : parsed;
 
     const state = initState(branch, base, max);
     const path = getStatePath(branch);

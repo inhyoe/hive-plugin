@@ -11,7 +11,7 @@ export function parseDiffOutput(raw: string): DiffResult {
     return { diff: "", lineCount: 0, empty: true, tooLarge: false };
   }
 
-  const lines = raw.split("\n");
+  const lines = raw.endsWith("\n") ? raw.slice(0, -1).split("\n") : raw.split("\n");
   const lineCount = lines.length;
 
   return {
@@ -74,7 +74,7 @@ if (import.meta.main) {
   const args = process.argv.slice(2);
   const baseIdx = args.indexOf("--base");
   const modeIdx = args.indexOf("--mode");
-  const base = baseIdx !== -1 ? args[baseIdx + 1] : "main";
+  const base = baseIdx !== -1 && args[baseIdx + 1] && !args[baseIdx + 1].startsWith("--") ? args[baseIdx + 1] : "main";
   const mode = modeIdx !== -1 ? args[modeIdx + 1] : "diff";
 
   if (mode === "files") {

@@ -158,15 +158,27 @@ if (import.meta.main) {
     if (!diffPath) { console.error("--diff required"); process.exit(1); }
     const diff = await Bun.file(diffPath).text();
     const issuesPath = issuesIdx !== -1 ? args[issuesIdx + 1] : null;
-    const issues = issuesPath
-      ? extractIssues(JSON.parse(await Bun.file(issuesPath).text()))
-      : [];
+    let issues: ReviewIssue[] = [];
+    if (issuesPath) {
+      try {
+        issues = extractIssues(JSON.parse(await Bun.file(issuesPath).text()));
+      } catch (e) {
+        console.error(`Failed to parse issues file '${issuesPath}': ${e instanceof Error ? e.message : e}`);
+        process.exit(1);
+      }
+    }
     console.log(buildVerifyPrompt(issues, diff));
   } else if (type === "file-review") {
     const filesPath = filesIdx !== -1 ? args[filesIdx + 1] : null;
     const reviewDir = reviewDirIdx !== -1 ? args[reviewDirIdx + 1] : ".hive-state/review";
     if (!filesPath) { console.error("--files required for file-review"); process.exit(1); }
-    const filesData = JSON.parse(await Bun.file(filesPath).text());
+    let filesData: unknown;
+    try {
+      filesData = JSON.parse(await Bun.file(filesPath).text());
+    } catch (e) {
+      console.error(`Failed to parse files JSON '${filesPath}': ${e instanceof Error ? e.message : e}`);
+      process.exit(1);
+    }
     const files: string[] = Array.isArray(filesData) ? filesData : filesData.files ?? [];
     console.log(buildClaudeTeamPrompt(files, reviewDir));
   } else {

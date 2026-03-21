@@ -35,8 +35,11 @@ if (import.meta.main) {
   const inputIdx = args.indexOf("--input");
 
   let input: string;
-  if (inputIdx !== -1 && args[inputIdx + 1]) {
+  if (inputIdx !== -1 && args[inputIdx + 1] && !args[inputIdx + 1].startsWith("--")) {
     input = await Bun.file(args[inputIdx + 1]).text();
+  } else if (inputIdx !== -1) {
+    console.error("Usage: --input <file>");
+    process.exit(1);
   } else {
     input = await Bun.stdin.text();
   }

@@ -539,7 +539,7 @@ Codex 미연결 시 skip이 아닌 **Claude Team 자동 생성**으로 대체.
 
 ### 5-6. 대시보드 이벤트 발행 + 종료
 
-```
+```text
 Phase 5+6 완료 후:
   1. emit session.summary (Phase 6 결과 포함) → 2. archive-session.sh → 3. hive-launcher.sh stop
   (모든 호출에 || true — 실패해도 워크플로우 미중단)

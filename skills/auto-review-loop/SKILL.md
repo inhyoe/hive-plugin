@@ -11,7 +11,7 @@ Codex에게 독립 리뷰를 요청하고, 지적사항을 Claude가 수정한 �
 
 ## 사용법
 
-```
+```text
 /auto-review-loop                    # 기본 (main 대비, 최대 10회)
 /auto-review-loop --max 5            # 최대 5회 반복
 /auto-review-loop --base develop     # develop 브랜치 대비 diff
@@ -25,7 +25,7 @@ Codex에게 독립 리뷰를 요청하고, 지적사항을 Claude가 수정한 �
 
 ## 실행 흐름
 
-```
+```text
 [Phase 1] 사전 검증: ccb-ping codex, 브랜치/diff 확인
 [Phase 2] 리뷰 요청: autonew codex → ask codex "[REVIEW]" → 턴 종료
 [Phase 3] 리뷰 대응: 파싱 → 수정 → commit → autonew → ask codex "[VERIFY]" → 턴 종료

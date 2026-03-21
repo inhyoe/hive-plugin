@@ -82,14 +82,18 @@ describe("prompt-builder CLI wrapper unwrap", () => {
     });
     const diff = "--- a/a.ts\n+++ b/a.ts\n+ fixed";
 
-    await Bun.write("/tmp/test-pb-wrapper.json", wrapper);
-    await Bun.write("/tmp/test-pb-diff.txt", diff);
+    const tmpDir = `/tmp/test-pb-${process.pid}-${Date.now()}`;
+    const { mkdirSync } = await import("node:fs");
+    mkdirSync(tmpDir, { recursive: true });
+
+    await Bun.write(`${tmpDir}/wrapper.json`, wrapper);
+    await Bun.write(`${tmpDir}/diff.txt`, diff);
 
     const proc = Bun.spawn([
       "bun", "run", "scripts/prompt-builder.ts",
       "--type", "verify",
-      "--diff", "/tmp/test-pb-diff.txt",
-      "--issues", "/tmp/test-pb-wrapper.json",
+      "--diff", `${tmpDir}/diff.txt`,
+      "--issues", `${tmpDir}/wrapper.json`,
     ], { cwd: import.meta.dir + "/../.." });
 
     const output = await new Response(proc.stdout).text();
