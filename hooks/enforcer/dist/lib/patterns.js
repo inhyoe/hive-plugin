@@ -2,7 +2,8 @@
 const MARKER_FILE_RE = /\.marker\b/i;
 const CREATE_MARKER_RE = /(?:bash\s+)?(?:\.\/)?scripts\/create-marker\.sh/;
 // Strict version: must be the command being executed (anchored to start)
-const CREATE_MARKER_EXEC_RE = /^\s*(?:bash\s+)?(?:\.\/)?scripts\/create-marker\.sh/;
+// Allows: env prefix, variable assignments (FOO=bar), bash, ./
+const CREATE_MARKER_EXEC_RE = /^\s*(?:env\s+)?(?:[A-Za-z_]\w*=\S*\s+)*(?:bash\s+)?(?:\.\/)?scripts\/create-marker\.sh/;
 export function isDirectMarkerCreation(command) {
     // If command doesn't reference .marker files at all, it's fine
     if (!MARKER_FILE_RE.test(command))
