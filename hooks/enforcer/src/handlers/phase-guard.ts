@@ -1,5 +1,5 @@
 import { readSession } from '../lib/state.js';
-import { Phase, phaseIndex, getNextPhase } from '../lib/phases.js';
+import { Phase, phaseIndex } from '../lib/phases.js';
 import { PHASE_CONTEXT_MAP } from '../lib/phase-context-map.js';
 import { writePendingReads } from '../lib/pending-reads.js';
 import {
@@ -113,11 +113,10 @@ export function recordPendingReadsAfterMarker(stateDir: string): void {
   const result = readSession(stateDir);
   if (result.status !== 'ok' || result.session.mode !== 'HIVE') return;
 
+  // After create-marker.sh advances the phase, session.phase is already
+  // the newly entered phase. Write reads for THIS phase (not the next one).
   const currentPhase = result.session.phase;
-  const nextPhase = getNextPhase(currentPhase);
-  if (!nextPhase) return;
-
-  const requiredFiles = PHASE_CONTEXT_MAP[nextPhase] ?? [];
+  const requiredFiles = PHASE_CONTEXT_MAP[currentPhase] ?? [];
   if (requiredFiles.length > 0) {
     writePendingReads(stateDir, requiredFiles);
   }

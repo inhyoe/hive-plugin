@@ -1,6 +1,8 @@
 // Whitelist: only create-marker.sh standalone calls are allowed to touch .marker files
 const MARKER_FILE_RE = /\.marker\b/i;
 const CREATE_MARKER_RE = /(?:bash\s+)?(?:\.\/)?scripts\/create-marker\.sh/;
+// Strict version: must be the command being executed (anchored to start)
+const CREATE_MARKER_EXEC_RE = /^\s*(?:bash\s+)?(?:\.\/)?scripts\/create-marker\.sh/;
 export function isDirectMarkerCreation(command) {
     // If command doesn't reference .marker files at all, it's fine
     if (!MARKER_FILE_RE.test(command))
@@ -13,6 +15,9 @@ export function isDirectMarkerCreation(command) {
 }
 export function isCreateMarkerCall(command) {
     return CREATE_MARKER_RE.test(command);
+}
+export function isCreateMarkerExecution(command) {
+    return CREATE_MARKER_EXEC_RE.test(command);
 }
 export function extractCreateMarkerGate(command) {
     const match = command.match(/create-marker\.sh\s+(.*)/);
