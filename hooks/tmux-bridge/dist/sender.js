@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { sendKeys, clearHistory, pasteFile } from './tmux.js';
+import { clearHistory, pasteFile } from './tmux.js';
 import { REGISTRY_DIR } from './types.js';
 function savePromptFile(name, content) {
     const filePath = join(REGISTRY_DIR, `${name}-prompt.txt`);
@@ -135,22 +135,15 @@ export function sendInitial(paneId, prompt, marker, provider, name, purpose = 'g
     const filePath = savePromptFile(name, content);
     // Use tmux paste-buffer for reliable prompt delivery
     // Provider TUI is already running (started by spawner)
+    // pasteFile now includes Enter for submission
     pasteFile(paneId, filePath);
-    // Submit the pasted prompt
-    sendKeys(paneId, '');
 }
 export function sendFollowup(paneId, prompt, marker, name, purpose = 'general', meta) {
     clearHistory(paneId);
     const content = buildPromptFileContent(purpose, prompt, marker, meta);
     const filePath = savePromptFile(name, content);
     // Paste prompt into running TUI
+    // pasteFile now includes Enter for submission
     pasteFile(paneId, filePath);
-    // Submit
-    setTimeout(() => {
-        try {
-            sendKeys(paneId, '');
-        }
-        catch { /* pane may be gone */ }
-    }, 300);
 }
 //# sourceMappingURL=sender.js.map

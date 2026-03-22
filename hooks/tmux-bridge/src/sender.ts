@@ -158,10 +158,8 @@ export function sendInitial(
 
   // Use tmux paste-buffer for reliable prompt delivery
   // Provider TUI is already running (started by spawner)
+  // pasteFile now includes Enter for submission
   pasteFile(paneId, filePath);
-
-  // Submit the pasted prompt
-  sendKeys(paneId, '');
 }
 
 export function sendFollowup(
@@ -178,10 +176,6 @@ export function sendFollowup(
   const filePath = savePromptFile(name, content);
 
   // Paste prompt into running TUI
+  // pasteFile now includes Enter for submission
   pasteFile(paneId, filePath);
-
-  // Submit
-  setTimeout(() => {
-    try { sendKeys(paneId, ''); } catch { /* pane may be gone */ }
-  }, 300);
 }

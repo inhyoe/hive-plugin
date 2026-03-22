@@ -37,6 +37,13 @@ export function killPane(paneId) {
 export function pasteFile(paneId, filePath) {
     exec(`tmux load-buffer '${filePath}'`);
     exec(`tmux paste-buffer -t ${paneId}`);
+    // Codex TUI needs multiple Enter presses after multi-line paste:
+    // 1st Enter: may be consumed as line break in input
+    // 2nd Enter: submits the prompt
+    execSync('sleep 0.5', { timeout: 5000 });
+    exec(`tmux send-keys -t ${paneId} Enter`);
+    execSync('sleep 0.3', { timeout: 5000 });
+    exec(`tmux send-keys -t ${paneId} Enter`);
 }
 export function paneExists(paneId) {
     const result = execSafe(`tmux list-panes -a -F '#{pane_id}'`);
