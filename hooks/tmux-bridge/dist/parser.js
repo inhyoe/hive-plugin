@@ -31,15 +31,23 @@ export function isNoiseLine(line) {
 }
 export function findMarker(raw, marker) {
     const lines = raw.split('\n');
-    for (let i = 0; i < lines.length; i++) {
+    // Find the last • response line — marker must be AFTER a response block
+    let lastResponseLine = -1;
+    for (let i = lines.length - 1; i >= 0; i--) {
+        if (/^\s*•\s/.test(lines[i])) {
+            lastResponseLine = i;
+            break;
+        }
+    }
+    // Search backwards from the end, but only accept markers AFTER last • line
+    for (let i = lines.length - 1; i >= 0; i--) {
         const line = lines[i];
         if (!line.includes(marker))
             continue;
-        // Exclude false positives (prompt echo, command line)
-        const isFalsePositive = MARKER_FALSE_POSITIVE_PATTERNS.some((p) => p.test(line));
-        if (!isFalsePositive) {
-            return { found: true, lineNumber: i };
-        }
+        // Must be after at least one response line
+        if (lastResponseLine === -1 || i < lastResponseLine)
+            continue;
+        return { found: true, lineNumber: i };
     }
     return { found: false, lineNumber: -1 };
 }

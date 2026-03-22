@@ -33,6 +33,8 @@ export interface MarkerSearchResult {
 
 export type Registry = Record<string, RegistryEntry>;
 
+export type Purpose = 'review' | 'verify' | 'consensus' | 'implement' | 'general';
+
 export const PROVIDER_COMMANDS: Record<string, string> = {
   codex: 'codex -a never -s danger-full-access',
   gemini: 'gemini',

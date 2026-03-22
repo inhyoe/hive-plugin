@@ -27,6 +27,7 @@ export interface MarkerSearchResult {
     lineNumber: number;
 }
 export type Registry = Record<string, RegistryEntry>;
+export type Purpose = 'review' | 'verify' | 'consensus' | 'implement' | 'general';
 export declare const PROVIDER_COMMANDS: Record<string, string>;
 export declare const DEFAULT_POLL_INTERVAL = 2000;
 export declare const DEFAULT_POLL_TIMEOUT = 300;

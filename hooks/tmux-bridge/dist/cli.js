@@ -48,22 +48,26 @@ async function main() {
         // High-level commands (replace bash wrappers)
         // ========================================
         case 'ask': {
-            // Usage: hive-tmux ask <provider> "<prompt>" [--wait] [--followup] [--marker M] [--session S]
+            // Usage: hive-tmux ask <provider> "<prompt>" [--wait] [--followup] [--marker M] [--purpose P] [--base B]
             const provider = process.argv[3];
             const prompt = process.argv[4];
             if (!provider || !prompt) {
-                console.error('Usage: hive-tmux ask <codex|gemini> "<prompt>" [--wait] [--followup] [--marker M]');
+                console.error('Usage: hive-tmux ask <codex|gemini> "<prompt>" [--wait] [--followup] [--marker M] [--purpose P]');
                 process.exit(1);
             }
             const askArgs = parseArgs(process.argv.slice(5));
             const marker = askArgs['marker'] ?? generateMarker();
+            const purpose = (askArgs['purpose'] ?? 'general');
+            const meta = {};
+            if (askArgs['base'])
+                meta['base'] = askArgs['base'];
             ensureProvider(provider, askArgs['session']);
             const entry = registry.get(provider);
             if (askArgs['followup']) {
-                sendFollowup(entry.paneId, prompt, marker, provider);
+                sendFollowup(entry.paneId, prompt, marker, provider, purpose, meta);
             }
             else {
-                sendInitial(entry.paneId, prompt, marker, entry.provider, provider);
+                sendInitial(entry.paneId, prompt, marker, entry.provider, provider, purpose, meta);
             }
             registry.register(provider, { ...entry, marker });
             if (askArgs['wait']) {
@@ -177,6 +181,10 @@ async function main() {
         case 'status': {
             const all = args['reconcile'] ? registry.reconcile() : registry.list();
             console.log(JSON.stringify(all, null, 2));
+            // Exit 1 if no providers are registered (for Phase 6 fallback detection)
+            if (Object.keys(all).length === 0) {
+                process.exit(1);
+            }
             break;
         }
         default:
