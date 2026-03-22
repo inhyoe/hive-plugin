@@ -78,8 +78,13 @@ async function main() {
                 }
                 else {
                     console.error(`[tmux-bridge] ${result.status}`);
-                    process.exit(1);
                 }
+                // Auto-kill after --wait completes (unless --keep)
+                if (!askArgs['keep']) {
+                    killProvider(provider);
+                }
+                if (result.status !== 'done')
+                    process.exit(1);
             }
             else {
                 console.log(`[CCB_ASYNC_SUBMITTED:${marker}]`);
@@ -87,10 +92,10 @@ async function main() {
             break;
         }
         case 'pend': {
-            // Usage: hive-tmux pend <provider> [--timeout N]
+            // Usage: hive-tmux pend <provider> [--timeout N] [--keep]
             const provider = process.argv[3];
             if (!provider) {
-                console.error('Usage: hive-tmux pend <codex|gemini> [--timeout N]');
+                console.error('Usage: hive-tmux pend <codex|gemini> [--timeout N] [--keep]');
                 process.exit(1);
             }
             const pendArgs = parseArgs(process.argv.slice(4));
@@ -103,9 +108,17 @@ async function main() {
             const result = await poll(entry.paneId, '', timeout, DEFAULT_POLL_INTERVAL, provider);
             if (result.status === 'done') {
                 console.log(result.response ?? '');
+                // Auto-kill pane after receiving response (unless --keep)
+                if (!pendArgs['keep']) {
+                    killProvider(provider);
+                }
             }
             else {
                 console.error(`[tmux-bridge] ${result.status}`);
+                // Kill on timeout too — pane is likely stuck
+                if (!pendArgs['keep']) {
+                    killProvider(provider);
+                }
                 process.exit(1);
             }
             break;
