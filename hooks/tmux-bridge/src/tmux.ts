@@ -69,8 +69,10 @@ export function killPane(paneId: string): void {
 export function pasteFile(paneId: string, filePath: string): void {
   const safePaneId = sanitize(paneId);
   const safeFilePath = sanitize(filePath);
-  exec(`tmux load-buffer '${safeFilePath}'`);
-  exec(`tmux paste-buffer -t ${safePaneId}`);
+  // Use named buffer per pane to prevent concurrent paste collisions
+  const bufName = `hive-${safePaneId.replace('%', '')}`;
+  exec(`tmux load-buffer -b '${bufName}' '${safeFilePath}'`);
+  exec(`tmux paste-buffer -b '${bufName}' -t ${safePaneId} -d`);
   // Codex TUI needs multiple Enter presses after multi-line paste
   // Extra delay + 3rd Enter to ensure prompt submission (v0.116.0 timing issue)
   execSync('sleep 1', { timeout: 5000 });
