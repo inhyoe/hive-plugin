@@ -3,7 +3,7 @@
 ## 1. 합의 단계
 
 ```
-Bash("./scripts/tmux-ask.sh codex '
+Bash("$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex '
 [TASK PROPOSAL — {{TEAM_ID}} — R{{ROUND_NUM}}]
 
 <AGENT_CAPABILITY_DIRECTIVE>
@@ -62,7 +62,7 @@ Do NOT respond based on inference alone when tools are available.
 ### 표준 템플릿
 
 ```
-Bash("./scripts/tmux-ask.sh codex '
+Bash("$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex '
 [HIVE IMPLEMENTATION — {{TEAM_ID}} — W{{WAVE_NUM}}]
 
 <AGENT_CAPABILITY_DIRECTIVE>
@@ -120,7 +120,7 @@ Do NOT respond based on inference alone when tools are available.
 ### 예시: 실제 위임
 
 ```
-./scripts/tmux-ask.sh codex "[HIVE IMPLEMENTATION — T3 — W1]
+$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex "[HIVE IMPLEMENTATION — T3 — W1]
 
 src/components/login-form.tsx 파일을 수정해줘:
 
@@ -144,5 +144,5 @@ export function LoginForm() {
 
 ```
 # 이렇게 하면 안 됨 (파일 내용 없음, 구체적 지시 없음)
-./scripts/tmux-ask.sh codex "login-form.tsx를 개선해줘. 접근성이랑 에러 처리 수정."
+$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex "login-form.tsx를 개선해줘. 접근성이랑 에러 처리 수정."
 ```

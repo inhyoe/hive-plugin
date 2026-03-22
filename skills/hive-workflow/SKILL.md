@@ -319,8 +319,8 @@ Step C: 의존성 → 실행 순서 (topological sort)
 | 작업 성격 | Provider | 이유 |
 |-----------|----------|------|
 | 핵심 로직 / 아키텍처 설계 | **Claude** (Agent tool) | 복잡한 추론, 설계 판단 |
-| 직접 구현 / 리팩터링 | **Codex** (`./scripts/tmux-ask.sh codex`) | 코드 생성 강점, 구체적 파일 수정 |
-| 사전 리서치 / 체크리스트 / 문서 | **Gemini** (`./scripts/tmux-ask.sh gemini`) | 대량 토큰, 반복 작업 |
+| 직접 구현 / 리팩터링 | **Codex** (`$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex`) | 코드 생성 강점, 구체적 파일 수정 |
+| 사전 리서치 / 체크리스트 / 문서 | **Gemini** (`$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh gemini`) | 대량 토큰, 반복 작업 |
 | 간단한 수정 / 설정 | **Claude haiku** (Agent tool) | 빠른 처리, 저비용 |
 | TDD 격리 (Phase 5) | `hive-tdd-pipeline` §1 참조 | Claude=테스트, Codex=구현, Gemini=검증 |
 
@@ -415,7 +415,7 @@ Claude 에이전트:
   → description에 팀 식별자 포함, isolation="worktree"
   → CONSENSUS 문서 + Serena 컨텍스트를 프롬프트에 포함
 Codex 에이전트 (직접 구현 — MANDATORY):
-  ./scripts/tmux-ask.sh codex "파일 내용 + 구체적 수정 지시"
+  $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex "파일 내용 + 구체적 수정 지시"
   → 수정 대상 심볼의 전체 코드 + 참조 타입/인터페이스 시그니처 + 관련 import 포함
     (토큰 제한 고려 — 전체 파일 대신 관련 섹션 허용)
   → 파일명 + 수정할 함수/클래스 수준의 구체적 지시
@@ -423,7 +423,7 @@ Codex 에이전트 (직접 구현 — MANDATORY):
   → Async Guardrail 준수 (CCB_ASYNC_SUBMITTED 마커 → 턴 종료)
   → round_id/team_id 마커 포함 (예: [HIVE IMPLEMENTATION — T2 — W1])
 Gemini 에이전트:
-  ./scripts/tmux-ask.sh gemini "$PROMPT"
+  $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh gemini "$PROMPT"
   → 동일 tmux-bridge 패턴
 ```
 
@@ -513,7 +513,7 @@ RESULT의 `reviewer` 필드에 따라:
 
 | reviewer | 실행 방식 |
 |----------|----------|
-| `codex` | `Bash("./scripts/tmux-ask.sh codex '$PROMPT'")` → Async Guardrail 준수 |
+| `codex` | `Bash("$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex '$PROMPT'")` → Async Guardrail 준수 |
 | `claude-team` | `Agent(description="Phase6-Review", prompt="$PROMPT", subagent_type="general-purpose", isolation="worktree")` |
 
 Codex 미연결 시 skip이 아닌 **Claude Team 자동 생성**으로 대체.

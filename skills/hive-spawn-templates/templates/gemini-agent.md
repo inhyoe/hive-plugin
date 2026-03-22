@@ -3,7 +3,7 @@
 ## 1. 합의 단계
 
 ```
-Bash("./scripts/tmux-ask.sh gemini '
+Bash("$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh gemini '
 [TASK PROPOSAL — {{TEAM_ID}} — R{{ROUND_NUM}}]
 
 <AGENT_CAPABILITY_DIRECTIVE>
@@ -51,7 +51,7 @@ Do NOT respond based on inference alone when tools are available.
 ## 2. 구현 단계
 
 ```
-Bash("./scripts/tmux-ask.sh gemini '
+Bash("$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh gemini '
 [HIVE IMPLEMENTATION — {{TEAM_ID}} — W{{WAVE_NUM}}]
 
 <AGENT_CAPABILITY_DIRECTIVE>

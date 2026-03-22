@@ -37,7 +37,8 @@ P1 사전검증 → P2 리뷰요청 → P3 수정+검증 → P4 완료
    ```bash
    node hooks/tmux-bridge/dist/cli.js status --reconcile
    ```
-   - 실패 시: "❌ Codex가 실행 중이 아닙니다. tmux에서 Codex 세션을 시작해주세요." 출력 후 **중단**.
+   - 실패 시(빈 레지스트리): tmux-bridge `ask` 명령의 `ensureProvider()`가 자동 스폰하므로 **중단하지 않고 계속 진행**.
+   - tmux 자체가 없는 경우에만 중단.
 
 2. **베이스 브랜치 감지:**
    ```bash
@@ -68,15 +69,19 @@ P1 사전검증 → P2 리뷰요청 → P3 수정+검증 → P4 완료
    diff 내용을 `/tmp/auto-review-diff.txt`에 저장 후 실행. 출력을 `review_prompt`로 사용.
 3. 실행:
    ```bash
-   Bash("./scripts/tmux-ask.sh codex '{review_prompt}' --purpose review --base {base_branch}")
+   Bash("$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex '{review_prompt}' --purpose review --base {base_branch}")
    ```
-4. 출력: `Auto Review Loop 시작 — Codex processing...`
-5. **턴 즉시 종료** (Async Guardrail 준수).
+4. 백그라운드 응답 수집:
+   ```bash
+   Bash("$HIVE_PLUGIN_DIR/scripts/tmux-pend.sh codex --timeout 300 --keep", run_in_background=true)
+   ```
+   → 사용자 개입 없이 Codex 응답 도착 시 자동 알림 → Phase 3 진행.
+5. 출력: `Auto Review Loop 시작 — Codex processing...`
 
-## Phase 3: 리뷰 대응 (Codex 응답 도착 시)
+## Phase 3: 리뷰 대응 (백그라운드 pend 완료 시)
 
-**IMPORTANT:** Codex 응답이 대화에 도착하면 이 Phase를 자동 실행한다.
-이전 턴에서 `[REVIEW REQUEST]` 또는 `[VERIFY REQUEST]`를 보냈다면, 이 응답은 Auto Review Loop의 일부이다.
+**IMPORTANT:** `run_in_background` pend가 완료되면 자동으로 Phase 3을 실행한다.
+사용자 개입 불필요.
 
 1. **응답 파싱 (스크립트 사용):**
    Codex 응답을 `/tmp/codex-response.txt`에 저장 후:
@@ -120,12 +125,15 @@ P1 사전검증 → P2 리뷰요청 → P3 수정+검증 → P4 완료
      ```
    - 실행:
      ```bash
-     Bash("./scripts/tmux-ask.sh codex '{verify_prompt}' --purpose verify")
+     Bash("$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex '{verify_prompt}' --purpose verify")
+     ```
+   - 백그라운드 응답 수집:
+     ```bash
+     Bash("$HIVE_PLUGIN_DIR/scripts/tmux-pend.sh codex --timeout 300 --keep", run_in_background=true)
      ```
    - 출력: `Auto Review Loop — Iteration {N}/{max} — Codex processing...`
-   - **턴 즉시 종료**.
 
-5. Codex 응답 도착 → Phase 3 처음부터 반복.
+5. 백그라운드 pend 완료 → Phase 3 처음부터 반복.
 
 ## Phase 4: 완료
 
@@ -196,7 +204,7 @@ bun run ${CLAUDE_SKILL_DIR}/scripts/phase6-orchestrator.ts --base {base_branch} 
 
 | 조건 | 리뷰어 | 실행 |
 |------|--------|------|
-| Codex 연결됨 | codex | `Bash("./scripts/tmux-ask.sh codex '{prompt}'")` |
+| Codex 연결됨 | codex | `Bash("$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex '{prompt}'")` |
 | Codex 미연결 | claude-team | `Agent(description="Phase6-Review", prompt="{prompt}", isolation="worktree")` |
 
 Codex 미연결 시 **중단하지 않고** Claude Team을 생성하여 리뷰 수행.

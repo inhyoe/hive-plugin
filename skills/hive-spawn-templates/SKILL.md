@@ -109,8 +109,8 @@ Dynamic: `{{ROUND_NUM}}` `{{WAVE_NUM}}` `{{FILE_PATH_N}}` `{{FILE_N_CONTENT}}` (
 
 2. 독립 팀들에게 동시 TASK PROPOSAL 전송 (구현 지시 포함 금지):
    - Claude: Agent tool (합의 프롬프트 — templates/claude-agent.md §1 사용)
-   - Codex: ./scripts/tmux-ask.sh codex (합의 프롬프트 — templates/codex-agent.md §1 사용)
-   - Gemini: ./scripts/tmux-ask.sh gemini (합의 프롬프트 — templates/gemini-agent.md §1 사용)
+   - Codex: $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex (합의 프롬프트 — templates/codex-agent.md §1 사용)
+   - Gemini: $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh gemini (합의 프롬프트 — templates/gemini-agent.md §1 사용)
    이 단계에서 구현을 함께 지시하면 안 됨
 
 3. 응답 수신 + 리드 응답 (MANDATORY):
@@ -119,11 +119,11 @@ Dynamic: `{{ROUND_NUM}}` `{{WAVE_NUM}}` `{{FILE_PATH_N}}` `{{FILE_N_CONTENT}}` (
      - 마커 파싱 (AGREE/COUNTER/CLARIFY)
      - 리드 → SendMessage(recipient=에이전트명, content=응답)
    tmux-bridge 에이전트:
-     - ./scripts/tmux-pend.sh codex --marker "$MARKER" 로 수집
+     - $HIVE_PLUGIN_DIR/scripts/tmux-pend.sh codex --marker "$MARKER" 로 수집
      - 마커 파싱 (round_id/team_id 확인)
      - AGREE → CONSENSUS 문서 생성 (tmux-bridge에 확인 메시지 불필요 — stateless)
-     - COUNTER → ./scripts/tmux-ask.sh codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 재제안: ..."
-     - CLARIFY → ./scripts/tmux-ask.sh codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 추가 정보: ..."
+     - COUNTER → $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 재제안: ..."
+     - CLARIFY → $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 추가 정보: ..."
 
 4. 응답별 리드 행동:
    Claude 에이전트:
@@ -140,8 +140,8 @@ Dynamic: `{{ROUND_NUM}}` `{{WAVE_NUM}}` `{{FILE_PATH_N}}` `{{FILE_N_CONTENT}}` (
        → 에이전트 재응답 대기
    tmux-bridge 에이전트:
      AGREE → CONSENSUS 문서 생성 (확인 메시지 불필요 — tmux-bridge는 stateless)
-     COUNTER → ./scripts/tmux-ask.sh codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 재제안: ..."
-     CLARIFY → ./scripts/tmux-ask.sh codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 추가 정보: ..."
+     COUNTER → $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 재제안: ..."
+     CLARIFY → $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 추가 정보: ..."
 
 5. 합의 루프 반복 (max 5 rounds)
 6. 전체 CONSENSUS 도달 → Phase 5로
@@ -154,19 +154,19 @@ Dynamic: `{{ROUND_NUM}}` `{{WAVE_NUM}}` `{{FILE_PATH_N}}` `{{FILE_N_CONTENT}}` (
 
 ```
 0. 사전 준비 (에이전트 스폰 전):
-   - ./scripts/tmux-ask.sh gemini "리서치/체크리스트 요청" → 결과를 에이전트 프롬프트 "기준"으로 포함
-   - ./scripts/tmux-ask.sh codex "아키텍처 사전 리뷰 요청" → 결과를 에이전트 지침에 반영
+   - $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh gemini "리서치/체크리스트 요청" → 결과를 에이전트 프롬프트 "기준"으로 포함
+   - $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex "아키텍처 사전 리뷰 요청" → 결과를 에이전트 지침에 반영
 
 1. Wave별 실행 (순서 중요 — tmux-bridge async guardrail 준수):
    Step A: Claude 에이전트 먼저 스폰 — Agent tool (worktree isolation, 병렬)
-   Step B: tmux-bridge 호출 — ./scripts/tmux-ask.sh codex (파일 내용 + 구체적 수정 지시 + round_id)
+   Step B: tmux-bridge 호출 — $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex (파일 내용 + 구체적 수정 지시 + round_id)
            → CCB_ASYNC_SUBMITTED 시 턴 종료
-   Step C: 다음 턴에서 ./scripts/tmux-pend.sh codex --marker "$MARKER" 수집 후, ./scripts/tmux-ask.sh gemini (테스트/문서 작업)
+   Step C: 다음 턴에서 $HIVE_PLUGIN_DIR/scripts/tmux-pend.sh codex --marker "$MARKER" 수집 후, $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh gemini (테스트/문서 작업)
    필수: 대규모(6+) Codex 최소 2개, 중소(3-5) 최소 1개 모듈 직접 구현
 
 2. 결과 수집:
    - Claude: SendMessage 수신
-   - tmux-bridge: ./scripts/tmux-pend.sh codex/gemini --marker "$MARKER" 수집 (HIVE_DONE marker 확인)
+   - tmux-bridge: $HIVE_PLUGIN_DIR/scripts/tmux-pend.sh codex/gemini --marker "$MARKER" 수집 (HIVE_DONE marker 확인)
 
 3. 교차 검증:
    - Codex → Claude 수정 코드 리뷰

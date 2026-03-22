@@ -138,8 +138,8 @@ IF CLARIFY:
 | Provider | 전송 방법 | 수신 방법 |
 |----------|----------|----------|
 | Claude (Agent) | SendMessage(recipient, content) | 자동 수신 (idle notification) |
-| Codex (tmux-bridge) | `Bash("./scripts/tmux-ask.sh codex '[TASK PROPOSAL — TX — R1] ...'")` | `./scripts/tmux-pend.sh codex --marker "$MARKER"` |
-| Gemini (tmux-bridge) | `Bash("./scripts/tmux-ask.sh gemini '[TASK PROPOSAL — TX — R1] ...'")` | `./scripts/tmux-pend.sh gemini --marker "$MARKER"` |
+| Codex (tmux-bridge) | `Bash("$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex '[TASK PROPOSAL — TX — R1] ...'")` | `$HIVE_PLUGIN_DIR/scripts/tmux-pend.sh codex --marker "$MARKER"` |
+| Gemini (tmux-bridge) | `Bash("$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh gemini '[TASK PROPOSAL — TX — R1] ...'")` | `$HIVE_PLUGIN_DIR/scripts/tmux-pend.sh gemini --marker "$MARKER"` |
 
 ### tmux-bridge 프로바이더 합의 시 주의사항
 
@@ -300,7 +300,7 @@ G3 통과 마커: `[PLAN DEBATE — CONSENSUS — overall:{score≥7.0}]`
 pend로 응답 수집 → 마커 파싱 (round_id/team_id 확인)
   ↓
   AGREE → CONSENSUS 문서 생성 (확인 메시지 불필요 — tmux-bridge는 stateless)
-  COUNTER → 해당 프로바이더로 재응답 (./scripts/tmux-ask.sh codex 또는 ./scripts/tmux-ask.sh gemini):
+  COUNTER → 해당 프로바이더로 재응답 ($HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex 또는 $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh gemini):
              "[FOLLOW-UP — TX — RN] 재제안: ..."
   CLARIFY → 해당 프로바이더로 재응답:
              "[FOLLOW-UP — TX — RN] 추가 정보: ..."
