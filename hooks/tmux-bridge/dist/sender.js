@@ -13,15 +13,10 @@ function savePromptFile(name, content) {
 export function sendInitial(paneId, prompt, marker, provider, name) {
     const fullPrompt = `${prompt} ${buildMarkerInstruction(marker)}`;
     const providerCmd = PROVIDER_COMMANDS[provider] ?? provider;
-    if (fullPrompt.length > PROMPT_FILE_THRESHOLD) {
-        const filePath = savePromptFile(name, fullPrompt);
-        const fileCmd = `${providerCmd} "파일 ${filePath} 의 내용을 읽고 그 지시에 따라 작업하세요. ${buildMarkerInstruction(marker)}"`;
-        sendKeys(paneId, fileCmd);
-    }
-    else {
-        const escaped = fullPrompt.replace(/"/g, '\\"');
-        sendKeys(paneId, `${providerCmd} "${escaped}"`);
-    }
+    // Always use file-based delivery to avoid shell injection
+    const filePath = savePromptFile(name, fullPrompt);
+    const fileCmd = `${providerCmd} "파일 ${filePath} 의 내용을 읽고 그 지시에 따라 작업하세요. ${buildMarkerInstruction(marker)}"`;
+    sendKeys(paneId, fileCmd);
 }
 export function sendFollowup(paneId, prompt, marker, name) {
     clearHistory(paneId);

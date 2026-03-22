@@ -57,20 +57,16 @@ export function extractCurrentRound(raw, markerLineNumber) {
     const start = promptLine + 1;
     const end = markerLineNumber;
     const content = lines.slice(start, end);
-    // Skip prompt continuation lines (non-• lines before first • response)
-    let firstResponseIdx = 0;
+    // Skip leading empty lines only — preserve all content lines
+    // (responses may start with • or plain text)
+    let firstContentIdx = 0;
     for (let i = 0; i < content.length; i++) {
-        const trimmed = content[i].trim();
-        if (trimmed === '')
-            continue;
-        if (trimmed.startsWith('•')) {
-            firstResponseIdx = i;
+        if (content[i].trim() !== '') {
+            firstContentIdx = i;
             break;
         }
-        // Non-empty, non-• line before first response = prompt continuation
-        firstResponseIdx = i + 1;
     }
-    const responseContent = content.slice(firstResponseIdx);
+    const responseContent = content.slice(firstContentIdx);
     // Filter noise and clean up
     const cleaned = responseContent
         .filter((line) => !isNoiseLine(line))

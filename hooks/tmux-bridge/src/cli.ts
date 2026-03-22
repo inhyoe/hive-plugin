@@ -2,6 +2,7 @@ import { spawnProvider, killProvider } from './spawner.js';
 import { sendInitial, sendFollowup } from './sender.js';
 import { poll } from './poller.js';
 import * as registry from './registry.js';
+import { paneExists } from './tmux.js';
 import { DEFAULT_POLL_TIMEOUT } from './types.js';
 
 function parseArgs(args: string[]): Record<string, string> {
@@ -26,10 +27,14 @@ function generateMarker(): string {
   return `[HIVE_DONE:${Date.now()}]`;
 }
 
-/** Ensure provider pane exists, spawn if needed */
+/** Ensure provider pane exists and is alive, spawn if needed */
 function ensureProvider(provider: string, session?: string): void {
   const entry = registry.get(provider);
-  if (entry) return;
+  if (entry) {
+    if (paneExists(entry.paneId)) return;
+    // Stale entry — clean up and respawn
+    registry.unregister(provider);
+  }
   spawnProvider({
     provider: provider as 'codex' | 'gemini',
     name: provider,
