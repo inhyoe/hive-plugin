@@ -72,6 +72,9 @@ export function pasteFile(paneId: string, filePath: string): void {
   exec(`tmux load-buffer '${safeFilePath}'`);
   exec(`tmux paste-buffer -t ${safePaneId}`);
   // Codex TUI needs multiple Enter presses after multi-line paste
+  // Extra delay + 3rd Enter to ensure prompt submission (v0.116.0 timing issue)
+  execSync('sleep 1', { timeout: 5000 });
+  exec(`tmux send-keys -t ${safePaneId} Enter`);
   execSync('sleep 0.5', { timeout: 5000 });
   exec(`tmux send-keys -t ${safePaneId} Enter`);
   execSync('sleep 0.3', { timeout: 5000 });

@@ -4,9 +4,18 @@ import { sendKeys, clearHistory, pasteFile } from './tmux.js';
 import { REGISTRY_DIR, responseFilePath } from './types.js';
 import type { Purpose } from './types.js';
 
+const SAFE_NAME = /^[A-Za-z0-9_-]+$/;
+
+function validateName(name: string): void {
+  if (!SAFE_NAME.test(name)) {
+    throw new Error(`Invalid name: ${name}`);
+  }
+}
+
 function savePromptFile(name: string, content: string): string {
+  validateName(name);
   const filePath = join(REGISTRY_DIR, `${name}-prompt.txt`);
-  writeFileSync(filePath, content);
+  writeFileSync(filePath, content, { mode: 0o600 });
   return filePath;
 }
 

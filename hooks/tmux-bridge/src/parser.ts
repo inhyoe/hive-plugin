@@ -22,96 +22,8 @@ const NOISE_PATTERNS: RegExp[] = [
   /── Worked for/,           // Work duration
 ];
 
-// Codex TUI idle prompt patterns — appear ONLY when codex is waiting for input
-const IDLE_PROMPT_PATTERNS: RegExp[] = [
-  /^\s*›\s+Implement\s/,
-  /^\s*›\s+Run\s+\/review/,
-  /^\s*›\s+Find\s+and\s+fix/,
-  /^\s*›\s+Summarize\s+recent/,
-  /^\s*›\s+Improve\s+documentation/,
-  /^\s*›\s+Use\s+\/skills/,
-  /^\s*›\s+Explain\s/,
-  /^\s*›\s+Write\s+tests/,
-  /^\s*›\s+Refactor\s/,
-  /^\s*›\s+Add\s/,
-];
-
 export function isNoiseLine(line: string): boolean {
   return NOISE_PATTERNS.some((p) => p.test(line));
-}
-
-/**
- * Detect if codex TUI is idle (finished responding, waiting for next input).
- * Idle state = last non-empty lines contain an idle prompt (› Implement...)
- * followed by a status bar (gpt-X.Y ... N% left).
- */
-export function isIdle(raw: string): boolean {
-  const lines = raw.split('\n');
-
-  // Check last 8 non-empty lines for idle pattern
-  const nonEmpty = lines.filter((l) => l.trim() !== '').slice(-8);
-
-  const hasIdlePrompt = nonEmpty.some((l) =>
-    IDLE_PROMPT_PATTERNS.some((p) => p.test(l)),
-  );
-  const hasStatusBar = nonEmpty.some((l) =>
-    /gpt-\d+\.\d+.*\d+%\s*left/.test(l),
-  );
-
-  // NOT idle if "Working" or "Starting MCP" is visible — codex is still processing
-  const isWorking = nonEmpty.some((l) =>
-    /Working\s*\(|Starting MCP/.test(l),
-  );
-
-  return hasIdlePrompt && hasStatusBar && !isWorking;
-}
-
-/**
- * Extract the response from the LAST completed exchange in the pane.
- * Works by finding the last idle prompt (› Implement...) and extracting
- * everything between the user's prompt and that idle prompt.
- */
-export function extractLatestResponse(raw: string): string | null {
-  const lines = raw.split('\n');
-
-  // Find the last idle prompt line
-  let idleLine = -1;
-  for (let i = lines.length - 1; i >= 0; i--) {
-    if (IDLE_PROMPT_PATTERNS.some((p) => p.test(lines[i]!))) {
-      idleLine = i;
-      break;
-    }
-  }
-  if (idleLine === -1) return null;
-
-  // Find the user's prompt (› with pasted content or actual prompt) before idle
-  // It's the second-to-last › line (the one before idle)
-  let userPromptLine = -1;
-  for (let i = idleLine - 1; i >= 0; i--) {
-    if (/^\s*›\s/.test(lines[i]!)) {
-      userPromptLine = i;
-      break;
-    }
-  }
-
-  // Find first • response line after user prompt (skip prompt echo continuation)
-  let responseStart = userPromptLine + 1;
-  for (let i = userPromptLine + 1; i < idleLine; i++) {
-    const trimmed = lines[i]!.trim();
-    if (trimmed.startsWith('•')) {
-      responseStart = i;
-      break;
-    }
-  }
-
-  // Extract between responseStart and idleLine
-  const content = lines.slice(responseStart, idleLine);
-
-  const cleaned = content
-    .filter((line) => !isNoiseLine(line))
-    .filter((line) => line.trim() !== '');
-
-  return cleaned.length > 0 ? cleaned.join('\n') : null;
 }
 
 export function parseTokenRemaining(raw: string): string | null {
@@ -119,10 +31,7 @@ export function parseTokenRemaining(raw: string): string | null {
   return match ? `${match[1]}% left` : null;
 }
 
-// Legacy marker-based API (kept for backwards compatibility)
 export function findMarker(raw: string, marker: string): MarkerSearchResult {
-  // With idle detection, markers are no longer needed.
-  // But if a marker IS present in the response, find it.
   const lines = raw.split('\n');
   for (let i = lines.length - 1; i >= 0; i--) {
     if (!lines[i]!.includes(marker)) continue;
@@ -131,47 +40,4 @@ export function findMarker(raw: string, marker: string): MarkerSearchResult {
     return { found: true, lineNumber: i };
   }
   return { found: false, lineNumber: -1 };
-}
-
-export function extractCurrentRound(
-  raw: string,
-  markerLineNumber: number,
-): string {
-  const lines = raw.split('\n');
-  let promptLine = -1;
-  for (let i = markerLineNumber - 1; i >= 0; i--) {
-    if (/^\s*›\s/.test(lines[i]!)) {
-      promptLine = i;
-      break;
-    }
-  }
-  const start = promptLine + 1;
-  const end = markerLineNumber;
-  const content = lines.slice(start, end);
-  let firstContentIdx = 0;
-  for (let i = 0; i < content.length; i++) {
-    if (content[i]!.trim() !== '') {
-      firstContentIdx = i;
-      break;
-    }
-  }
-  const responseContent = content.slice(firstContentIdx);
-  const cleaned = responseContent
-    .filter((line) => !isNoiseLine(line))
-    .filter((line) => line.trim() !== '');
-  return cleaned.join('\n');
-}
-
-export function extractResponse(
-  raw: string,
-  _marker: string,
-): { response: string; tokenRemaining: string | null } | null {
-  // Primary: use idle detection
-  if (!isIdle(raw)) return null;
-
-  const response = extractLatestResponse(raw);
-  if (!response) return null;
-
-  const tokenRemaining = parseTokenRemaining(raw);
-  return { response, tokenRemaining };
 }

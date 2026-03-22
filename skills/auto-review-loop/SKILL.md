@@ -37,7 +37,7 @@ P1 사전검증 → P2 리뷰요청 → P3 수정+검증 → P4 완료
    ```bash
    node hooks/tmux-bridge/dist/cli.js status --reconcile
    ```
-   - 실패 시: "❌ Codex가 실행 중이 아닙니다. `ccb codex`로 시작해주세요." 출력 후 **중단**.
+   - 실패 시: "❌ Codex가 실행 중이 아닙니다. tmux에서 Codex 세션을 시작해주세요." 출력 후 **중단**.
 
 2. **베이스 브랜치 감지:**
    ```bash

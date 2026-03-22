@@ -138,19 +138,19 @@ IF CLARIFY:
 | Provider | 전송 방법 | 수신 방법 |
 |----------|----------|----------|
 | Claude (Agent) | SendMessage(recipient, content) | 자동 수신 (idle notification) |
-| Codex (CCB) | `Bash("./scripts/tmux-ask.sh codex '[TASK PROPOSAL — TX — R1] ...'")` | `./scripts/tmux-pend.sh codex --marker "$MARKER"` |
-| Gemini (CCB) | `Bash("./scripts/tmux-ask.sh gemini '[TASK PROPOSAL — TX — R1] ...'")` | `./scripts/tmux-pend.sh gemini --marker "$MARKER"` |
+| Codex (tmux-bridge) | `Bash("./scripts/tmux-ask.sh codex '[TASK PROPOSAL — TX — R1] ...'")` | `./scripts/tmux-pend.sh codex --marker "$MARKER"` |
+| Gemini (tmux-bridge) | `Bash("./scripts/tmux-ask.sh gemini '[TASK PROPOSAL — TX — R1] ...'")` | `./scripts/tmux-pend.sh gemini --marker "$MARKER"` |
 
-### CCB 프로바이더 합의 시 주의사항
+### tmux-bridge 프로바이더 합의 시 주의사항
 
 - 마커 기반 파싱: `[AGREE — {팀 ID}]`, `[COUNTER — {팀 ID}]`, `[CLARIFY — {팀 ID}]` 마커로 응답 유형 식별
-- `CCB_DONE` = 응답 완료
+- `HIVE_DONE` = 응답 완료
 - 마커 없이 응답이 오면 → 전체 내용을 파싱하여 의도 추론
-- CCB Async Guardrail: `CCB_ASYNC_SUBMITTED` → 턴 종료, pend로 나중에 수집
+- Async Guardrail: `CCB_ASYNC_SUBMITTED` → 턴 종료, pend로 나중에 수집
 
-### CCB Correlation Keys (split-brain 방지)
+### tmux-bridge Correlation Keys (split-brain 방지)
 
-CCB는 stateless이므로, 지연/중복/순서역전 응답을 방지하기 위해 **필수 correlation key**를 포함한다:
+tmux-bridge는 stateless이므로, 지연/중복/순서역전 응답을 방지하기 위해 **필수 correlation key**를 포함한다:
 
 | Key | 형식 | 용도 |
 |-----|------|------|
@@ -169,7 +169,7 @@ follow-up: `[FOLLOW-UP — {team_id} — {round_id} — parent:{parent_round_id}
 - 이미 처리된 round_id의 응답이 다시 오면 무시 (idempotent)
 - 현재 라운드보다 이전 round_id 응답이 오면 무시 (stale)
 
-### CCB 라운드 타임아웃 정책
+### tmux-bridge 라운드 타임아웃 정책
 
 ```
 soft timeout: 3분 — pend 1회 확인, 미응답 시 /ask로 재요청
@@ -180,7 +180,7 @@ pend 확인 간격: 최소 1분 (즉시 연속 확인 금지)
 ### 동시 COUNTER + 타임아웃 충돌 해소
 
 ```
-CCB 에이전트가 COUNTER를 보냈으나 hard timeout도 동시에 도달한 경우:
+tmux-bridge 에이전트가 COUNTER를 보냈으나 hard timeout도 동시에 도달한 경우:
   1. pend로 응답이 이미 도착했으면 → COUNTER 응답 우선 (타임아웃 무시)
   2. pend로 응답 미도착 + hard timeout → LEAD DECISION 에스컬레이션
   3. LEAD DECISION 후 뒤늦게 COUNTER 도착 → 무시 (stale response)
@@ -294,19 +294,19 @@ G3 통과 마커: `[PLAN DEBATE — CONSENSUS — overall:{score≥7.0}]`
   CLARIFY → 추가 정보 제공 + "검토 후 다시 응답해주세요"
 ```
 
-### 9-2. CCB 에이전트 (Codex/Gemini) 응답 시
+### 9-2. tmux-bridge 에이전트 (Codex/Gemini) 응답 시
 
 ```
 pend로 응답 수집 → 마커 파싱 (round_id/team_id 확인)
   ↓
-  AGREE → CONSENSUS 문서 생성 (확인 메시지 불필요 — CCB는 stateless)
+  AGREE → CONSENSUS 문서 생성 (확인 메시지 불필요 — tmux-bridge는 stateless)
   COUNTER → 해당 프로바이더로 재응답 (./scripts/tmux-ask.sh codex 또는 ./scripts/tmux-ask.sh gemini):
              "[FOLLOW-UP — TX — RN] 재제안: ..."
   CLARIFY → 해당 프로바이더로 재응답:
              "[FOLLOW-UP — TX — RN] 추가 정보: ..."
 ```
 
-**CCB는 stateless**: AGREE 시 별도 "확인" 메시지 불필요 (Claude Agent과 다름).
+**tmux-bridge는 stateless**: AGREE 시 별도 "확인" 메시지 불필요 (Claude Agent과 다름).
 
 ### 9-3. 구현 중 에이전트 질문/보고 시
 
@@ -358,7 +358,7 @@ LEAD DECISION으로 종료된 팀의 의존 팀(downstream):
 - **일방적 소통**: 구현 프롬프트로 한꺼번에 스폰 → 결과만 수집 → 양방향 대화 0건
 - **합의+구현 합치기**: TASK PROPOSAL + 구현을 하나의 프롬프트에 → COUNTER 기회 소멸
 - **Stale CONSENSUS**: Phase 5 실패 → 요구사항 변경 → 기존 합의로 재실행 (§10-1 미확인)
-- **CCB duplicate 무시**: round_id 검증 없이 처리 → stale 응답 오인
+- **tmux-bridge duplicate 무시**: round_id 검증 없이 처리 → stale 응답 오인
 - **follow-up 누락**: COUNTER/CLARIFY 후 응답 없이 다른 팀으로 이동
 
 ### blocked_by 의존성 위반 실행
@@ -372,7 +372,7 @@ T2 blocked_by T1인데, T1 CONSENSUS 미완료 상태에서 T2 구현 시작
 
 ### 대화 최소 횟수 (프로바이더별)
 
-| Phase | Claude Agent (SendMessage) | CCB (Codex/Gemini — /ask) |
+| Phase | Claude Agent (SendMessage) | tmux-bridge (Codex/Gemini — /ask) |
 |-------|---------------------------|--------------------------|
 | Phase 4 | 최소 2회 (PROPOSAL + CONSENSUS 확인) | 최소 1회 (PROPOSAL). COUNTER/CLARIFY 시 follow-up /ask 필수 |
 | Phase 5 | 최소 1회 (구현 지시 또는 결과 피드백) | 최소 1회 (구현 지시) |

@@ -1,53 +1,90 @@
-import { describe, it, expect } from 'vitest';
-import { PROVIDER_COMMANDS } from '../src/types.js';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 
-describe('sender OMO prompt templates', () => {
-  it('review template includes Oracle XML tags', () => {
-    const tags = ['<role>', '<decision_framework>', '<tool_usage_rules>', '<scope_discipline>', '<output_verbosity_spec>', '<high_risk_self_check>'];
-    // All Oracle-pattern tags must be present in review template
-    for (const tag of tags) {
-      expect(tag).toBeTruthy();
-    }
+const testDir = '/tmp/hive-tmux-test-sender';
+
+// Mock types.ts to use test directory
+vi.mock('../src/types.js', async (importOriginal) => {
+  const orig = await importOriginal<typeof import('../src/types.js')>();
+  return {
+    ...orig,
+    REGISTRY_DIR: testDir,
+    responseFilePath: (name: string) => `${testDir}/${name}-response.txt`,
+  };
+});
+
+// Mock tmux.ts to avoid real tmux calls
+const mockPasteFile = vi.fn();
+const mockClearHistory = vi.fn();
+vi.mock('../src/tmux.js', () => ({
+  pasteFile: mockPasteFile,
+  clearHistory: mockClearHistory,
+  sendKeys: vi.fn(),
+}));
+
+const { sendInitial, sendFollowup } = await import('../src/sender.js');
+
+describe('sender (real module)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Ensure test dir exists
+    const { mkdirSync } = require('node:fs');
+    mkdirSync(testDir, { recursive: true });
   });
 
-  it('verify template includes tool_usage_rules and scope_discipline', () => {
-    const requiredSections = ['<tool_usage_rules>', '<scope_discipline>', '<output_verbosity_spec>'];
-    for (const section of requiredSections) {
-      expect(section).toBeTruthy();
-    }
+  it('sendInitial calls pasteFile with prompt file', () => {
+    sendInitial('%42', 'test prompt', 'marker1', 'codex', 'test-worker');
+    expect(mockPasteFile).toHaveBeenCalledOnce();
+    const [paneId, filePath] = mockPasteFile.mock.calls[0]!;
+    expect(paneId).toBe('%42');
+    expect(filePath).toContain('test-worker-prompt.txt');
   });
 
-  it('implement template includes Sisyphus-Junior patterns', () => {
-    const patterns = ['<do_not_ask>', '<verification>', '<scope_discipline>'];
-    for (const p of patterns) {
-      expect(p).toBeTruthy();
-    }
+  it('sendInitial writes prompt file with content', () => {
+    sendInitial('%42', 'hello world', 'marker1', 'codex', 'test-worker', 'general');
+    const [, filePath] = mockPasteFile.mock.calls[0]!;
+    const content = readFileSync(filePath, 'utf-8');
+    expect(content).toContain('hello world');
+    expect(content).toContain('Completion');
   });
 
-  it('review template instructs codex to run git diff directly', () => {
-    const instruction = 'git diff main...HEAD 로 변경사항을 직접 확인하세요';
-    expect(instruction).toContain('git diff');
-    expect(instruction).toContain('직접');
+  it('review purpose includes Oracle XML tags', () => {
+    sendInitial('%42', 'review this', 'marker1', 'codex', 'test-worker', 'review');
+    const [, filePath] = mockPasteFile.mock.calls[0]!;
+    const content = readFileSync(filePath, 'utf-8');
+    expect(content).toContain('<role>');
+    expect(content).toContain('<decision_framework>');
+    expect(content).toContain('<scope_discipline>');
+    expect(content).toContain('git diff');
   });
 
-  it('verify template instructs codex to run git diff HEAD~1', () => {
-    const instruction = 'git diff HEAD~1..HEAD 로 수정사항을 직접 확인하세요';
-    expect(instruction).toContain('HEAD~1');
+  it('implement purpose includes do_not_ask directive', () => {
+    sendInitial('%42', 'implement this', 'marker1', 'codex', 'test-worker', 'implement');
+    const [, filePath] = mockPasteFile.mock.calls[0]!;
+    const content = readFileSync(filePath, 'utf-8');
+    expect(content).toContain('<do_not_ask>');
+    expect(content).toContain('KEEP GOING');
   });
 
-  it('consensus template preserves existing prompt (AGENT_CAPABILITY_DIRECTIVE already included)', () => {
-    // consensus purpose should NOT add extra XML tags
-    // because hive-spawn-templates already provides full structured prompt
-    const existingPrompt = '[TASK PROPOSAL] with AGENT_CAPABILITY_DIRECTIVE';
-    // consensus just appends completion marker
-    expect(existingPrompt).toContain('TASK PROPOSAL');
+  it('consensus purpose preserves prompt as-is', () => {
+    sendInitial('%42', '[TASK PROPOSAL] my proposal', 'marker1', 'codex', 'test-worker', 'consensus');
+    const [, filePath] = mockPasteFile.mock.calls[0]!;
+    const content = readFileSync(filePath, 'utf-8');
+    expect(content).toContain('[TASK PROPOSAL] my proposal');
+    expect(content).not.toContain('<role>');
   });
 
-  it('all prompts use paste-buffer delivery (no shell injection)', () => {
-    // sendInitial uses pasteFile() instead of sendKeys with prompt content
-    // This means no user input is ever interpolated into shell commands
-    const filePath = '/tmp/hive-tmux/codex-prompt.txt';
-    expect(filePath).not.toContain('$');
-    expect(filePath).not.toContain('`');
+  it('sendFollowup clears history before sending', () => {
+    sendFollowup('%42', 'followup msg', 'marker2', 'test-worker');
+    expect(mockClearHistory).toHaveBeenCalledWith('%42');
+    expect(mockPasteFile).toHaveBeenCalledOnce();
+  });
+
+  it('sendInitial includes response file path in completion instruction', () => {
+    sendInitial('%42', 'test', 'marker1', 'codex', 'my-worker', 'general');
+    const [, filePath] = mockPasteFile.mock.calls[0]!;
+    const content = readFileSync(filePath, 'utf-8');
+    expect(content).toContain('my-worker-response.txt');
   });
 });

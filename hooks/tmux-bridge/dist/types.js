@@ -8,6 +8,9 @@ export const REGISTRY_DIR = '/tmp/hive-tmux';
 export const REGISTRY_FILE = '/tmp/hive-tmux/sessions.json';
 /** Response file path for a given provider name */
 export function responseFilePath(name) {
+    if (!/^[A-Za-z0-9_-]+$/.test(name)) {
+        throw new Error(`Invalid provider name: ${name}`);
+    }
     return `${REGISTRY_DIR}/${name}-response.txt`;
 }
 //# sourceMappingURL=types.js.map

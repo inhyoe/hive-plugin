@@ -1,30 +1,26 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, readFileSync, existsSync, writeFileSync, renameSync, mkdirSync } from 'node:fs';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-// Use isolated temp directory — never touch the real registry
 const testDir = mkdtempSync(join(tmpdir(), 'hive-reg-'));
 const testFile = join(testDir, 'sessions.json');
 
-// Minimal registry implementation for testing (avoids importing real module
-// which would use the production REGISTRY_FILE path)
-function load(): Record<string, unknown> {
-  try {
-    return JSON.parse(readFileSync(testFile, 'utf-8'));
-  } catch {
-    return {};
-  }
-}
+// Mock types.ts to redirect registry to temp directory
+vi.mock('../src/types.js', async (importOriginal) => {
+  const orig = await importOriginal<typeof import('../src/types.js')>();
+  return { ...orig, REGISTRY_DIR: testDir, REGISTRY_FILE: testFile };
+});
 
-function save(data: Record<string, unknown>): void {
-  mkdirSync(testDir, { recursive: true });
-  const tmp = `${testFile}.${process.pid}.tmp`;
-  writeFileSync(tmp, JSON.stringify(data, null, 2));
-  renameSync(tmp, testFile);
-}
+// Mock tmux.ts paneExists to avoid real tmux calls
+vi.mock('../src/tmux.js', () => ({
+  paneExists: vi.fn((id: string) => id !== '%dead'),
+}));
 
-describe('registry (isolated)', () => {
+// Import AFTER mocks are set up
+const { load, save, register, unregister, get, list, reconcile } = await import('../src/registry.js');
+
+describe('registry (real module)', () => {
   beforeEach(() => {
     try { rmSync(testFile); } catch { /* ok */ }
   });
@@ -38,47 +34,42 @@ describe('registry (isolated)', () => {
   });
 
   it('register and get', () => {
-    const entry = { paneId: '%42', provider: 'codex', startedAt: new Date().toISOString() };
-    const reg = load();
-    reg['t1'] = entry;
-    save(reg);
-    const got = load();
-    expect(got['t1']).toEqual(entry);
+    const entry = { paneId: '%42', provider: 'codex' as const, startedAt: new Date().toISOString() };
+    register('t1', entry);
+    const got = get('t1');
+    expect(got).toEqual(entry);
   });
 
   it('unregister removes entry', () => {
-    const reg: Record<string, unknown> = { t1: { paneId: '%42' } };
-    save(reg);
-    const loaded = load();
-    delete loaded['t1'];
-    save(loaded);
-    expect(load()['t1']).toBeUndefined();
+    register('t1', { paneId: '%42', provider: 'codex', startedAt: '' });
+    unregister('t1');
+    expect(get('t1')).toBeNull();
   });
 
   it('list returns all entries', () => {
-    save({
-      t1: { paneId: '%42', provider: 'codex' },
-      t2: { paneId: '%43', provider: 'gemini' },
-    });
-    const all = load();
-    expect(Object.keys(all)).toHaveLength(2);
-  });
-
-  it('atomic write leaves no tmp files', () => {
-    save({ t1: { paneId: '%42' } });
-    expect(existsSync(`${testFile}.${process.pid}.tmp`)).toBe(false);
-  });
-
-  it('saves valid JSON', () => {
-    save({ t1: { paneId: '%42' } });
-    const raw = readFileSync(testFile, 'utf-8');
-    expect(() => JSON.parse(raw)).not.toThrow();
+    register('t1', { paneId: '%42', provider: 'codex', startedAt: '' });
+    register('t2', { paneId: '%43', provider: 'gemini', startedAt: '' });
+    expect(Object.keys(list())).toHaveLength(2);
   });
 
   it('overwrite existing entry', () => {
-    save({ t1: { paneId: '%42' } });
-    save({ t1: { paneId: '%99', marker: '[HIVE_DONE:abc]' } });
-    const got = load();
-    expect((got['t1'] as { paneId: string }).paneId).toBe('%99');
+    register('t1', { paneId: '%42', provider: 'codex', startedAt: '' });
+    register('t1', { paneId: '%99', provider: 'codex', startedAt: '', marker: '[HIVE_DONE:abc]' });
+    expect(get('t1')!.paneId).toBe('%99');
+  });
+
+  it('reconcile removes dead panes', () => {
+    register('alive', { paneId: '%42', provider: 'codex', startedAt: '' });
+    register('dead', { paneId: '%dead', provider: 'gemini', startedAt: '' });
+    const result = reconcile();
+    expect(result['alive']).toBeDefined();
+    expect(result['dead']).toBeUndefined();
+  });
+
+  it('reconcile preserves live panes', () => {
+    register('a1', { paneId: '%10', provider: 'codex', startedAt: '' });
+    register('a2', { paneId: '%20', provider: 'codex', startedAt: '' });
+    const result = reconcile();
+    expect(Object.keys(result)).toHaveLength(2);
   });
 });

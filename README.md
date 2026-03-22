@@ -184,7 +184,7 @@ Markers are stored as files to prevent conversation context bloat. Only `[G1 ✓
 
 - **Claude Code CLI** (latest)
 - **Serena MCP server** — for codebase analysis in Phase 2
-- **CCB bridge** — for Codex/Gemini integration (optional but recommended for full multi-provider orchestration)
+- **tmux-bridge** — for Codex/Gemini integration (optional but recommended for full multi-provider orchestration)
 - **Node.js** — for the real-time dashboard
 
 ## Installation

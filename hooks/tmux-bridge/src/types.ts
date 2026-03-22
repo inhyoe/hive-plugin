@@ -47,5 +47,8 @@ export const REGISTRY_FILE = '/tmp/hive-tmux/sessions.json';
 
 /** Response file path for a given provider name */
 export function responseFilePath(name: string): string {
+  if (!/^[A-Za-z0-9_-]+$/.test(name)) {
+    throw new Error(`Invalid provider name: ${name}`);
+  }
   return `${REGISTRY_DIR}/${name}-response.txt`;
 }

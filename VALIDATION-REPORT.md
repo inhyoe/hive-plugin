@@ -294,7 +294,7 @@ PYEOF
 | 2 | `user-invocable` 명시성 | main skill은 absent (기본값 true) | 명시적으로 `user-invocable: true` 추가하면 의도가 더 명확 |
 | 3 | `LEAD DECISION` 마커 테스트 | test_markers.py에서 미검증 | 6종 마커 + LEAD DECISION + HIVE PROGRESS = 8종으로 테스트 확장 |
 | 4 | `context` 필드 활용 | 미사용 | sub-skill을 `context: fork`로 분리 실행하면 context window 절약 가능 |
-| 5 | `compatibility` 필드 | 미사용 | S3 spec의 선택 필드. "Requires Serena MCP, CCB bridge (optional)" 추가 고려 |
+| 5 | `compatibility` 필드 | 미사용 | S3 spec의 선택 필드. "Requires Serena MCP, tmux-bridge (optional)" 추가 고려 |
 | 6 | 평가(Evaluation) 작성 | 없음 | S2: "Create evaluations BEFORE writing extensive documentation" — 3개+ 테스트 시나리오 권장 |
 
 ---

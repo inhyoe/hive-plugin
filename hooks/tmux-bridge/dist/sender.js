@@ -2,9 +2,16 @@ import { writeFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { clearHistory, pasteFile } from './tmux.js';
 import { REGISTRY_DIR, responseFilePath } from './types.js';
+const SAFE_NAME = /^[A-Za-z0-9_-]+$/;
+function validateName(name) {
+    if (!SAFE_NAME.test(name)) {
+        throw new Error(`Invalid name: ${name}`);
+    }
+}
 function savePromptFile(name, content) {
+    validateName(name);
     const filePath = join(REGISTRY_DIR, `${name}-prompt.txt`);
-    writeFileSync(filePath, content);
+    writeFileSync(filePath, content, { mode: 0o600 });
     return filePath;
 }
 function buildPromptFileContent(purpose, prompt, name, meta) {
