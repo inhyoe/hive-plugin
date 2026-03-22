@@ -140,61 +140,40 @@ P1 사전검증 → P2 리뷰요청 → P3 수정+검증 → P4 완료
    ```
 2. 사용자가 승인하면 `git push` 실행.
 
-## Review Prompt Template
+## Review Prompt Template (OMO Oracle 패턴)
 
-```
+`prompt-builder.ts`의 `buildReviewPrompt()`가 생성. 구조:
+
+```xml
 [REVIEW REQUEST]
-아래 코드 변경사항을 리뷰해주세요.
 
-HIGH SIGNAL 이슈만 보고하세요:
-- 컴파일/파싱 실패 (구문 오류, 타입 오류, missing imports)
-- 확실한 로직 오류 (입력과 무관하게 잘못된 결과)
-- 보안 취약점
-- CLAUDE.md 규칙 위반 (정확한 규칙 인용)
-
-보고하지 마세요:
-- 코드 스타일, 품질 우려
-- 특정 입력에만 발생하는 잠재적 이슈
-- 주관적 개선 제안
-- linter가 잡을 수 있는 것
-
-출력 형식:
-이슈가 있으면:
-### Issues
-1. **[파일:라인]** 설명
-2. ...
-
-이슈가 없으면 정확히:
-NO ISSUES FOUND
+<role>역할 정의 + 접근 방식</role>
+<decision_framework>승인 편향, HIGH SIGNAL만, 최대 5개</decision_framework>
+<tool_usage_rules>파일 직접 읽기, Serena MCP 활용, 추론 금지</tool_usage_rules>
+<scope_discipline>보고하지 않을 것 목록</scope_discipline>
+<output_verbosity_spec>### Issues 또는 NO ISSUES FOUND</output_verbosity_spec>
+<high_risk_self_check>파일:라인 검증, 근거 확인, 단정 제거</high_risk_self_check>
 
 --- DIFF START ---
 {diff}
 --- DIFF END ---
 ```
 
-## Verify Prompt Template
+## Verify Prompt Template (OMO Oracle 경량)
 
-```
+`prompt-builder.ts`의 `buildVerifyPrompt()`가 생성. 구조:
+
+```xml
 [VERIFY REQUEST]
-이전 리뷰에서 지적된 이슈들이 수정되었습니다.
-수정된 부분만 검증해주세요. 새로운 이슈도 확인해주세요.
 
-이전 지적사항:
-{previous_issues}
+<role>수정 검증 전문가</role>
+<tool_usage_rules>파일 직접 읽기, Serena 참조 확인</tool_usage_rules>
+<scope_discipline>이전 지적만 확인, 기존 이슈 제외</scope_discipline>
+<output_verbosity_spec>### Issues 또는 NO ISSUES FOUND</output_verbosity_spec>
+<high_risk_self_check>수정 전후 비교 검증</high_risk_self_check>
 
-수정 diff:
---- FIX DIFF START ---
-{fix_diff}
---- FIX DIFF END ---
-
-출력 형식:
-이슈가 있으면:
-### Issues
-1. **[파일:라인]** 설명
-2. ...
-
-이슈가 없으면 정확히:
-NO ISSUES FOUND
+이전 지적사항: {previous_issues}
+수정 diff: {fix_diff}
 ```
 
 ## Phase 6 모드 (Hive 통합)
