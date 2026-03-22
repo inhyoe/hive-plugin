@@ -3,7 +3,7 @@
 ## 1. 합의 단계
 
 ```
-CCB_CALLER=claude ask gemini "
+Bash("./scripts/tmux-ask.sh gemini '
 [TASK PROPOSAL — {{TEAM_ID}} — R{{ROUND_NUM}}]
 
 <AGENT_CAPABILITY_DIRECTIVE>
@@ -45,13 +45,13 @@ Do NOT respond based on inference alone when tools are available.
 질문 시: 현재 이해, 불명확한 점, 선택지
 
 기술적 문제가 있으면 반드시 COUNTER하세요. 무조건 AGREE 금지.
-"
+'")
 ```
 
 ## 2. 구현 단계
 
 ```
-CCB_CALLER=claude ask gemini "
+Bash("./scripts/tmux-ask.sh gemini '
 [HIVE IMPLEMENTATION — {{TEAM_ID}} — W{{WAVE_NUM}}]
 
 <AGENT_CAPABILITY_DIRECTIVE>
@@ -91,5 +91,5 @@ Do NOT respond based on inference alone when tools are available.
 - 변경 파일 목록
 - 각 파일별 핵심 변경 (diff 형태)
 - CONSENSUS 일치 여부 자체 검증
-"
+'")
 ```

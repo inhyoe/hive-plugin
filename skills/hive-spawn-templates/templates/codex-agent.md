@@ -3,7 +3,7 @@
 ## 1. 합의 단계
 
 ```
-CCB_CALLER=claude ask codex "
+Bash("./scripts/tmux-ask.sh codex '
 [TASK PROPOSAL — {{TEAM_ID}} — R{{ROUND_NUM}}]
 
 <AGENT_CAPABILITY_DIRECTIVE>
@@ -45,7 +45,7 @@ Do NOT respond based on inference alone when tools are available.
 질문 시: 현재 이해, 불명확한 점, 선택지
 
 기술적 문제가 있으면 반드시 COUNTER하세요. 무조건 AGREE 금지.
-"
+'")
 ```
 
 ## 2. 구현 단계 (MANDATORY — Codex는 직접 구현자)
@@ -62,7 +62,7 @@ Do NOT respond based on inference alone when tools are available.
 ### 표준 템플릿
 
 ```
-CCB_CALLER=claude ask codex "
+Bash("./scripts/tmux-ask.sh codex '
 [HIVE IMPLEMENTATION — {{TEAM_ID}} — W{{WAVE_NUM}}]
 
 <AGENT_CAPABILITY_DIRECTIVE>
@@ -114,13 +114,13 @@ Do NOT respond based on inference alone when tools are available.
 - 각 파일별 핵심 변경 (diff 형태)
 - CONSENSUS 일치 여부 자체 검증
 - 정적 분석 결과
-"
+'")
 ```
 
 ### 예시: 실제 위임
 
 ```
-/ask codex "[HIVE IMPLEMENTATION — T3 — W1]
+./scripts/tmux-ask.sh codex "[HIVE IMPLEMENTATION — T3 — W1]
 
 src/components/login-form.tsx 파일을 수정해줘:
 
@@ -144,5 +144,5 @@ export function LoginForm() {
 
 ```
 # 이렇게 하면 안 됨 (파일 내용 없음, 구체적 지시 없음)
-/ask codex "login-form.tsx를 개선해줘. 접근성이랑 에러 처리 수정."
+./scripts/tmux-ask.sh codex "login-form.tsx를 개선해줘. 접근성이랑 에러 처리 수정."
 ```
