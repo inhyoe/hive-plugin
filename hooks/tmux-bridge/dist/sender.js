@@ -1,15 +1,16 @@
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { clearHistory, pasteFile } from './tmux.js';
-import { REGISTRY_DIR } from './types.js';
+import { REGISTRY_DIR, responseFilePath } from './types.js';
 function savePromptFile(name, content) {
     const filePath = join(REGISTRY_DIR, `${name}-prompt.txt`);
     writeFileSync(filePath, content);
     return filePath;
 }
-function buildPromptFileContent(purpose, prompt, marker, meta) {
+function buildPromptFileContent(purpose, prompt, name, meta) {
     const base = meta?.['base'] ?? 'main';
-    const completion = `\n\n## Completion\n응답 마지막 줄에 반드시 ${marker} 를 그대로 출력해.`;
+    const responsePath = responseFilePath(name);
+    const completionInstruction = `\n\n## Completion\n작업 완료 후 최종 응답 전문을 ${responsePath} 에 저장하세요.\necho 또는 파일 쓰기 도구로 응답 내용을 해당 경로에 기록하세요.`;
     switch (purpose) {
         case 'review':
             return `<role>
@@ -53,7 +54,7 @@ NO ISSUES FOUND
 </high_risk_self_check>
 
 ${prompt}
-${completion}`;
+${completionInstruction}`;
         case 'verify':
             return `<role>
 You are verifying that previously reported issues have been correctly fixed.
@@ -81,7 +82,7 @@ NO ISSUES FOUND
 </output_verbosity_spec>
 
 ${prompt}
-${completion}`;
+${completionInstruction}`;
         case 'implement':
             return `<role>
 You are a focused implementation specialist. Complete the task fully without asking for permission.
@@ -108,11 +109,11 @@ KEEP GOING. SOLVE PROBLEMS. ASK ONLY WHEN TRULY IMPOSSIBLE.
 </verification>
 
 ${prompt}
-${completion}`;
+${completionInstruction}`;
         case 'consensus':
             // hive-spawn-templates already provides full structured prompt with AGENT_CAPABILITY_DIRECTIVE
             return `${prompt}
-${completion}`;
+${completionInstruction}`;
         case 'general':
         default:
             return `<role>
@@ -127,23 +128,28 @@ You are an AI assistant completing the requested task.
 </tool_usage_rules>
 
 ${prompt}
-${completion}`;
+${completionInstruction}`;
     }
 }
-export function sendInitial(paneId, prompt, marker, provider, name, purpose = 'general', meta) {
-    const content = buildPromptFileContent(purpose, prompt, marker, meta);
+export function sendInitial(paneId, prompt, _marker, provider, name, purpose = 'general', meta) {
+    // Delete previous response file
+    try {
+        unlinkSync(responseFilePath(name));
+    }
+    catch { /* ok */ }
+    const content = buildPromptFileContent(purpose, prompt, name, meta);
     const filePath = savePromptFile(name, content);
-    // Use tmux paste-buffer for reliable prompt delivery
-    // Provider TUI is already running (started by spawner)
-    // pasteFile now includes Enter for submission
     pasteFile(paneId, filePath);
 }
-export function sendFollowup(paneId, prompt, marker, name, purpose = 'general', meta) {
+export function sendFollowup(paneId, prompt, _marker, name, purpose = 'general', meta) {
     clearHistory(paneId);
-    const content = buildPromptFileContent(purpose, prompt, marker, meta);
+    // Delete previous response file
+    try {
+        unlinkSync(responseFilePath(name));
+    }
+    catch { /* ok */ }
+    const content = buildPromptFileContent(purpose, prompt, name, meta);
     const filePath = savePromptFile(name, content);
-    // Paste prompt into running TUI
-    // pasteFile now includes Enter for submission
     pasteFile(paneId, filePath);
 }
 //# sourceMappingURL=sender.js.map

@@ -1,7 +1,7 @@
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { sendKeys, clearHistory, pasteFile } from './tmux.js';
-import { REGISTRY_DIR } from './types.js';
+import { REGISTRY_DIR, responseFilePath } from './types.js';
 import type { Purpose } from './types.js';
 
 function savePromptFile(name: string, content: string): string {
@@ -13,11 +13,12 @@ function savePromptFile(name: string, content: string): string {
 function buildPromptFileContent(
   purpose: Purpose,
   prompt: string,
-  marker: string,
+  name: string,
   meta?: Record<string, string>,
 ): string {
   const base = meta?.['base'] ?? 'main';
-  const completion = `\n\n## Completion\n응답 마지막 줄에 반드시 ${marker} 를 그대로 출력해.`;
+  const responsePath = responseFilePath(name);
+  const completionInstruction = `\n\n## Completion\n작업 완료 후 최종 응답 전문을 ${responsePath} 에 저장하세요.\necho 또는 파일 쓰기 도구로 응답 내용을 해당 경로에 기록하세요.`;
 
   switch (purpose) {
     case 'review':
@@ -62,7 +63,7 @@ NO ISSUES FOUND
 </high_risk_self_check>
 
 ${prompt}
-${completion}`;
+${completionInstruction}`;
 
     case 'verify':
       return `<role>
@@ -91,7 +92,7 @@ NO ISSUES FOUND
 </output_verbosity_spec>
 
 ${prompt}
-${completion}`;
+${completionInstruction}`;
 
     case 'implement':
       return `<role>
@@ -119,12 +120,12 @@ KEEP GOING. SOLVE PROBLEMS. ASK ONLY WHEN TRULY IMPOSSIBLE.
 </verification>
 
 ${prompt}
-${completion}`;
+${completionInstruction}`;
 
     case 'consensus':
       // hive-spawn-templates already provides full structured prompt with AGENT_CAPABILITY_DIRECTIVE
       return `${prompt}
-${completion}`;
+${completionInstruction}`;
 
     case 'general':
     default:
@@ -140,42 +141,43 @@ You are an AI assistant completing the requested task.
 </tool_usage_rules>
 
 ${prompt}
-${completion}`;
+${completionInstruction}`;
   }
 }
 
 export function sendInitial(
   paneId: string,
   prompt: string,
-  marker: string,
+  _marker: string,
   provider: string,
   name: string,
   purpose: Purpose = 'general',
   meta?: Record<string, string>,
 ): void {
-  const content = buildPromptFileContent(purpose, prompt, marker, meta);
+  // Delete previous response file
+  try { unlinkSync(responseFilePath(name)); } catch { /* ok */ }
+
+  const content = buildPromptFileContent(purpose, prompt, name, meta);
   const filePath = savePromptFile(name, content);
 
-  // Use tmux paste-buffer for reliable prompt delivery
-  // Provider TUI is already running (started by spawner)
-  // pasteFile now includes Enter for submission
   pasteFile(paneId, filePath);
 }
 
 export function sendFollowup(
   paneId: string,
   prompt: string,
-  marker: string,
+  _marker: string,
   name: string,
   purpose: Purpose = 'general',
   meta?: Record<string, string>,
 ): void {
   clearHistory(paneId);
 
-  const content = buildPromptFileContent(purpose, prompt, marker, meta);
+  // Delete previous response file
+  try { unlinkSync(responseFilePath(name)); } catch { /* ok */ }
+
+  const content = buildPromptFileContent(purpose, prompt, name, meta);
   const filePath = savePromptFile(name, content);
 
-  // Paste prompt into running TUI
-  // pasteFile now includes Enter for submission
   pasteFile(paneId, filePath);
 }

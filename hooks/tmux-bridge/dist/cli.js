@@ -3,7 +3,7 @@ import { sendInitial, sendFollowup } from './sender.js';
 import { poll } from './poller.js';
 import * as registry from './registry.js';
 import { paneExists } from './tmux.js';
-import { DEFAULT_POLL_TIMEOUT } from './types.js';
+import { DEFAULT_POLL_TIMEOUT, DEFAULT_POLL_INTERVAL } from './types.js';
 function parseArgs(args) {
     const result = {};
     for (let i = 0; i < args.length; i++) {
@@ -72,7 +72,7 @@ async function main() {
             registry.register(provider, { ...entry, marker });
             if (askArgs['wait']) {
                 const timeout = askArgs['timeout'] ? parseInt(askArgs['timeout']) : DEFAULT_POLL_TIMEOUT;
-                const result = await poll(entry.paneId, marker, timeout);
+                const result = await poll(entry.paneId, '', timeout, DEFAULT_POLL_INTERVAL, provider);
                 if (result.status === 'done') {
                     console.log(result.response ?? '');
                 }
@@ -87,24 +87,20 @@ async function main() {
             break;
         }
         case 'pend': {
-            // Usage: hive-tmux pend <provider> --marker <marker> [--timeout N]
+            // Usage: hive-tmux pend <provider> [--timeout N]
             const provider = process.argv[3];
             if (!provider) {
-                console.error('Usage: hive-tmux pend <codex|gemini> --marker <marker> [--timeout N]');
+                console.error('Usage: hive-tmux pend <codex|gemini> [--timeout N]');
                 process.exit(1);
             }
             const pendArgs = parseArgs(process.argv.slice(4));
-            if (!pendArgs['marker']) {
-                console.error('[tmux-bridge] --marker required');
-                process.exit(1);
-            }
             const entry = registry.get(provider);
             if (!entry) {
                 console.error(`[tmux-bridge] No pane for "${provider}"`);
                 process.exit(1);
             }
             const timeout = pendArgs['timeout'] ? parseInt(pendArgs['timeout']) : DEFAULT_POLL_TIMEOUT;
-            const result = await poll(entry.paneId, pendArgs['marker'], timeout);
+            const result = await poll(entry.paneId, '', timeout, DEFAULT_POLL_INTERVAL, provider);
             if (result.status === 'done') {
                 console.log(result.response ?? '');
             }

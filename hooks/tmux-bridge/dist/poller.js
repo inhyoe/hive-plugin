@@ -1,20 +1,22 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { parseTokenRemaining } from './parser.js';
 import { capturePaneOutput } from './tmux.js';
-import { extractResponse } from './parser.js';
-import { DEFAULT_POLL_INTERVAL, DEFAULT_POLL_TIMEOUT } from './types.js';
+import { DEFAULT_POLL_INTERVAL, DEFAULT_POLL_TIMEOUT, responseFilePath } from './types.js';
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
-export async function poll(paneId, marker, timeout = DEFAULT_POLL_TIMEOUT, interval = DEFAULT_POLL_INTERVAL) {
+export async function poll(paneId, _marker, timeout = DEFAULT_POLL_TIMEOUT, interval = DEFAULT_POLL_INTERVAL, name = 'codex') {
     const deadline = Date.now() + timeout * 1000;
+    const respFile = responseFilePath(name);
     while (Date.now() < deadline) {
-        const raw = capturePaneOutput(paneId, 5000);
-        const result = extractResponse(raw, marker);
-        if (result) {
-            return {
-                status: 'done',
-                response: result.response,
-                tokenRemaining: result.tokenRemaining ?? undefined,
-            };
+        // Check if response file exists (codex wrote it when done)
+        if (existsSync(respFile)) {
+            const response = readFileSync(respFile, 'utf-8').trim();
+            if (response.length > 0) {
+                const raw = capturePaneOutput(paneId, 100);
+                const tokenRemaining = parseTokenRemaining(raw) ?? undefined;
+                return { status: 'done', response, tokenRemaining };
+            }
         }
         if (Date.now() + interval > deadline)
             break;

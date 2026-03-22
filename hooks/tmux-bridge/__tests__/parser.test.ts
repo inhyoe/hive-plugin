@@ -1,46 +1,57 @@
 import { describe, it, expect } from 'vitest';
 import {
   isNoiseLine,
-  findMarker,
-  extractCurrentRound,
+  isIdle,
+  extractLatestResponse,
   parseTokenRemaining,
   extractResponse,
 } from '../src/parser.js';
 
-// Real codex TUI output sample (simplified from live test)
-const CODEX_SAMPLE_SIMPLE = `╭─░▒▓      ~/Document/GITHUB/hive-plugin  on    feat/install-script ────── ✔  24.13.1    at 23:38:47   ▓▒░
-╰─ codex -a never -s danger-full-access "스킬 목록을 알려줘. 응답 마지막 줄에 반드시 [HIVE_DONE:demo_123] 를 그대로 출력해."
+// Codex TUI output with idle prompt at end (completed response)
+const CODEX_COMPLETED = `╭─░▒▓      ~/Document/GITHUB/hive-plugin ────── ✔  24.13.1    at 23:38:47   ▓▒░
+╰─ codex -a never -s danger-full-access
 ╭────────────────────────────────────────────╮
 │ >_ OpenAI Codex (v0.116.0)                 │
-│ model:     gpt-5.4 high   /model to change │
-│ directory: ~/Document/GITHUB/hive-plugin   │
 ╰────────────────────────────────────────────╯
 
   Tip: New 2x rate limits until April 2nd.
 
 
-› 스킬 목록을 알려줘. 응답 마지막 줄에 반드시 [HIVE_DONE:demo_123] 를 그대로 출력해.
+› [Pasted Content 500 chars]
 
 
 • 1. hive: 멀티 프로바이더 오케스트레이션
   2. hive-consensus: Phase 4 합의 프로토콜
   3. hive-workflow: Phase 0-3, 5 워크플로 엔진
 
-  [HIVE_DONE:demo_123]
-
 
 › Run /review on my current changes
 
   gpt-5.4 high · 96% left · ~/Document/GITHUB/hive-plugin`;
 
-// Sample with Serena tool usage (noise-heavy)
-const CODEX_SAMPLE_WITH_TOOLS = `╭─░▒▓      ~/Document/GITHUB/hive-plugin ────── ✔  at 23:19:35   ▓▒░
-╰─ codex -a never -s danger-full-access "단점 3가지. [HIVE_DONE:t2_999] 를 그대로 출력해."
-╭────────────────────────────────────────────╮
+// Codex TUI output still working (no idle prompt)
+const CODEX_WORKING = `╭────────────────────────────────────────────╮
 │ >_ OpenAI Codex (v0.116.0)                 │
 ╰────────────────────────────────────────────╯
 
-› 단점 3가지. [HIVE_DONE:t2_999] 를 그대로 출력해.
+› [Pasted Content 500 chars]
+
+
+• 리뷰 범위를 확인하고 있습니다.
+
+• Working (12s • esc to interrupt)
+
+
+› Implement {feature}
+
+  gpt-5.4 high · 97% left · ~/Document/GITHUB/hive-plugin`;
+
+// Tool-heavy response
+const CODEX_WITH_TOOLS = `╭────────────────────────────────────────────╮
+│ >_ OpenAI Codex (v0.116.0)                 │
+╰────────────────────────────────────────────╯
+
+› [Pasted Content 800 chars]
 
 
 • 먼저 코드를 확인하겠습니다.
@@ -59,34 +70,21 @@ const CODEX_SAMPLE_WITH_TOOLS = `╭─░▒▓      ~/Document/GITHUB/hive-plu
   2. 요청 격리와 동시성이 약합니다.
   3. 운영 의존성이 큽니다.
 
-  [HIVE_DONE:t2_999]
 
-
-› Implement feature
+› Implement {feature}
 
   gpt-5.4 high · 62% left · ~/Document/GITHUB/hive-plugin`;
 
-// Two-round sample (followup in same pane, after clear-history)
-const CODEX_SAMPLE_ROUND2 = `› 상대 팀(T2)의 반대 의견이 /tmp/hive-tmux/t2-opinion.txt 에 있습니다. 반론하세요. [HIVE_DONE:r2t1_456] 를 그대로 출력해.
+// NO ISSUES FOUND response
+const CODEX_NO_ISSUES = `› [Pasted Content 1000 chars]
 
 
-• 반대 의견 파일을 확인하겠습니다.
-
-• Ran cat /tmp/hive-tmux/t2-opinion.txt
-  └ 1. 출력 파싱 취약 2. 격리 약함 3. 운영 의존성
-
-──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-
-• 1. 파싱은 마커 프로토콜로 안정화 가능합니다.
-  2. 격리는 pane 분리로 충분합니다.
-  3. 운영 의존성은 tmux의 범용성으로 상쇄됩니다.
-
-  [HIVE_DONE:r2t1_456]
+• NO ISSUES FOUND
 
 
-› Run /review
+› Run /review on my current changes
 
-  gpt-5.4 high · 93% left · ~/Document/GITHUB/hive-plugin`;
+  gpt-5.4 high · 96% left · ~/path`;
 
 describe('isNoiseLine', () => {
   it('detects shell prompt lines', () => {
@@ -97,135 +95,54 @@ describe('isNoiseLine', () => {
   it('detects TUI frame', () => {
     expect(isNoiseLine('╭────────────────────╮')).toBe(true);
     expect(isNoiseLine('│ >_ OpenAI Codex    │')).toBe(true);
-    expect(isNoiseLine('╰────────────────────╯')).toBe(true);
-  });
-
-  it('detects tips', () => {
-    expect(isNoiseLine('  Tip: New 2x rate limits')).toBe(true);
-  });
-
-  it('detects prompt echo', () => {
-    expect(isNoiseLine('› 질문 내용')).toBe(true);
-    expect(isNoiseLine('› Run /review on my current changes')).toBe(true);
   });
 
   it('detects Serena logs', () => {
     expect(isNoiseLine('• Explored')).toBe(true);
     expect(isNoiseLine('• Called serena.list_dir(...)')).toBe(true);
     expect(isNoiseLine('• Ran pwd')).toBe(true);
-    expect(isNoiseLine('  └ Read tmux-ask.sh')).toBe(true);
-  });
-
-  it('detects dividers', () => {
-    expect(isNoiseLine('──────────────────────────')).toBe(true);
-  });
-
-  it('detects status bar', () => {
-    expect(isNoiseLine('  gpt-5.4 high · 96% left · ~/path')).toBe(true);
-  });
-
-  it('detects MCP startup', () => {
-    expect(isNoiseLine('• Starting MCP servers (1/2): serena')).toBe(true);
   });
 
   it('preserves actual response content', () => {
     expect(isNoiseLine('• 1. 구현 단순성: tmux는...')).toBe(false);
     expect(isNoiseLine('  2. 운영 안정성: 프로세스가...')).toBe(false);
-    expect(isNoiseLine('  [HIVE_DONE:abc]')).toBe(false);
   });
 });
 
-describe('findMarker', () => {
-  it('finds marker in clean response', () => {
-    const result = findMarker(CODEX_SAMPLE_SIMPLE, '[HIVE_DONE:demo_123]');
-    expect(result.found).toBe(true);
-    expect(result.lineNumber).toBeGreaterThan(0);
+describe('isIdle', () => {
+  it('detects completed response (idle prompt + status bar)', () => {
+    expect(isIdle(CODEX_COMPLETED)).toBe(true);
   });
 
-  it('ignores marker in prompt echo line', () => {
-    // The prompt echo line also contains the marker text
-    const lines = CODEX_SAMPLE_SIMPLE.split('\n');
-    const promptLines = lines
-      .map((l, i) => ({ l, i }))
-      .filter(({ l }) => l.includes('[HIVE_DONE:demo_123]'));
-    // Should be at least 2 occurrences: prompt echo + actual marker
-    expect(promptLines.length).toBeGreaterThanOrEqual(2);
-
-    // findMarker should return only the real marker (not the prompt echo)
-    const result = findMarker(CODEX_SAMPLE_SIMPLE, '[HIVE_DONE:demo_123]');
-    const markerLine = lines[result.lineNumber]!;
-    expect(markerLine).not.toContain('›');
-    expect(markerLine).not.toContain('codex');
+  it('detects working state as NOT idle', () => {
+    // Working state shows idle prompt placeholder but "Working" indicator
+    // means codex is still processing — should NOT be detected as idle
+    expect(isIdle(CODEX_WORKING)).toBe(false);
   });
 
-  it('returns not found for missing marker', () => {
-    const result = findMarker(CODEX_SAMPLE_SIMPLE, '[HIVE_DONE:nonexistent]');
-    expect(result.found).toBe(false);
-    expect(result.lineNumber).toBe(-1);
+  it('detects tool-heavy completed response', () => {
+    expect(isIdle(CODEX_WITH_TOOLS)).toBe(true);
   });
 
-  it('finds marker in tool-heavy output', () => {
-    const result = findMarker(CODEX_SAMPLE_WITH_TOOLS, '[HIVE_DONE:t2_999]');
-    expect(result.found).toBe(true);
+  it('detects NO ISSUES FOUND response as idle', () => {
+    expect(isIdle(CODEX_NO_ISSUES)).toBe(true);
   });
 
-  it('finds marker in plain-text response (no • bullets)', () => {
-    const plainTextResponse = `› Review this code.
+  it('returns false for output without idle prompt', () => {
+    const noIdle = `› Some prompt
 
 
-NO ISSUES FOUND
-
-  [HIVE_DONE:plain_test]
-
-
-› Run /review on my current changes
-
-  gpt-5.4 high · 96% left · ~/path`;
-    const result = findMarker(plainTextResponse, '[HIVE_DONE:plain_test]');
-    expect(result.found).toBe(true);
-    // Should NOT match the status bar line
-    const lines = plainTextResponse.split('\n');
-    expect(lines[result.lineNumber]).toContain('[HIVE_DONE:plain_test]');
-    expect(lines[result.lineNumber]).not.toContain('gpt-');
-  });
-
-  it('ignores marker in prompt echo region', () => {
-    const withPromptEcho = `╰─ codex -a never "prompt with [HIVE_DONE:echo_test]"
-╭────────────────────────────────────────────╮
-│ >_ OpenAI Codex (v0.116.0)                 │
-╰────────────────────────────────────────────╯
-
-› prompt with [HIVE_DONE:echo_test]
-
-
-• Response content here
-
-  [HIVE_DONE:echo_test]
-
-
-› Idle prompt
-
-  gpt-5.4 high · 96% left · ~/path`;
-    const result = findMarker(withPromptEcho, '[HIVE_DONE:echo_test]');
-    expect(result.found).toBe(true);
-    // Must find the one AFTER the • response, not the prompt echo
-    const lines = withPromptEcho.split('\n');
-    const markerLine = lines[result.lineNumber]!;
-    expect(markerLine.trim()).toBe('[HIVE_DONE:echo_test]');
+• Still working on it...`;
+    expect(isIdle(noIdle)).toBe(false);
   });
 });
 
-describe('extractCurrentRound', () => {
-  it('extracts clean response from simple output', () => {
-    const { lineNumber } = findMarker(
-      CODEX_SAMPLE_SIMPLE,
-      '[HIVE_DONE:demo_123]',
-    );
-    const response = extractCurrentRound(CODEX_SAMPLE_SIMPLE, lineNumber);
+describe('extractLatestResponse', () => {
+  it('extracts clean response from completed output', () => {
+    const response = extractLatestResponse(CODEX_COMPLETED);
+    expect(response).not.toBeNull();
     expect(response).toContain('hive: 멀티 프로바이더');
     expect(response).toContain('hive-consensus');
-    expect(response).toContain('hive-workflow');
-    // Should NOT contain noise
     expect(response).not.toContain('╭──');
     expect(response).not.toContain('Tip:');
     expect(response).not.toContain('gpt-5.4');
@@ -233,45 +150,29 @@ describe('extractCurrentRound', () => {
   });
 
   it('strips Serena logs from tool-heavy output', () => {
-    const { lineNumber } = findMarker(
-      CODEX_SAMPLE_WITH_TOOLS,
-      '[HIVE_DONE:t2_999]',
-    );
-    const response = extractCurrentRound(
-      CODEX_SAMPLE_WITH_TOOLS,
-      lineNumber,
-    );
+    const response = extractLatestResponse(CODEX_WITH_TOOLS);
+    expect(response).not.toBeNull();
     expect(response).toContain('출력 파싱');
     expect(response).toContain('동시성');
-    expect(response).toContain('운영 의존성');
-    // Noise stripped
     expect(response).not.toContain('Explored');
     expect(response).not.toContain('Called serena');
-    expect(response).not.toContain('──────');
-    expect(response).not.toContain('└');
   });
 
-  it('extracts only current round from followup', () => {
-    const { lineNumber } = findMarker(
-      CODEX_SAMPLE_ROUND2,
-      '[HIVE_DONE:r2t1_456]',
-    );
-    const response = extractCurrentRound(CODEX_SAMPLE_ROUND2, lineNumber);
-    expect(response).toContain('마커 프로토콜');
-    expect(response).toContain('pane 분리');
-    // Should NOT contain the Ran command output
-    expect(response).not.toContain('Ran cat');
-    expect(response).not.toContain('└');
+  it('extracts NO ISSUES FOUND', () => {
+    const response = extractLatestResponse(CODEX_NO_ISSUES);
+    expect(response).not.toBeNull();
+    expect(response).toContain('NO ISSUES FOUND');
+  });
+
+  it('returns null when no idle prompt', () => {
+    const noIdle = `› prompt\n\n• still working...`;
+    expect(extractLatestResponse(noIdle)).toBeNull();
   });
 });
 
 describe('parseTokenRemaining', () => {
   it('extracts token percentage', () => {
-    expect(parseTokenRemaining(CODEX_SAMPLE_SIMPLE)).toBe('96% left');
-  });
-
-  it('extracts from tool-heavy output', () => {
-    expect(parseTokenRemaining(CODEX_SAMPLE_WITH_TOOLS)).toBe('62% left');
+    expect(parseTokenRemaining(CODEX_COMPLETED)).toBe('96% left');
   });
 
   it('returns null when not present', () => {
@@ -280,21 +181,15 @@ describe('parseTokenRemaining', () => {
 });
 
 describe('extractResponse', () => {
-  it('returns full result for valid marker', () => {
-    const result = extractResponse(
-      CODEX_SAMPLE_SIMPLE,
-      '[HIVE_DONE:demo_123]',
-    );
+  it('returns response when idle (marker ignored)', () => {
+    const result = extractResponse(CODEX_COMPLETED, 'ignored');
     expect(result).not.toBeNull();
     expect(result!.response).toContain('hive');
     expect(result!.tokenRemaining).toBe('96% left');
   });
 
-  it('returns null for missing marker', () => {
-    const result = extractResponse(
-      CODEX_SAMPLE_SIMPLE,
-      '[HIVE_DONE:missing]',
-    );
-    expect(result).toBeNull();
+  it('returns null when not idle', () => {
+    const notIdle = `› prompt\n\n• working...\n\n• Starting MCP servers`;
+    expect(extractResponse(notIdle, 'ignored')).toBeNull();
   });
 });

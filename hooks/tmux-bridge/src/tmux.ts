@@ -12,24 +12,37 @@ function execSafe(cmd: string): string | null {
   }
 }
 
+/** Sanitize shell argument — only allow alphanumeric, dash, underscore, dot, colon, percent */
+function sanitize(input: string): string {
+  if (!/^[a-zA-Z0-9._:%\/-]+$/.test(input)) {
+    throw new Error(`Unsafe shell argument: ${input}`);
+  }
+  return input;
+}
+
+/** Escape single quotes for shell embedding */
+function shellEscape(input: string): string {
+  return input.replace(/'/g, "'\\''");
+}
+
 export function spawnPane(
   name: string,
   session?: string,
   historyLimit = 10_000,
 ): string {
-  const target = session ? `-t ${session}:1` : '';
+  const target = session ? `-t ${sanitize(session)}:1` : '';
+  const safeName = shellEscape(name);
   const paneId = exec(
     `tmux split-window -v ${target} -l 12 -d -P -F '#{pane_id}'`,
   );
-  exec(`tmux set-option -t ${paneId} history-limit ${historyLimit}`);
-  exec(`tmux select-pane -t ${paneId} -T "${name}"`);
+  exec(`tmux set-option -t ${sanitize(paneId)} history-limit ${historyLimit}`);
+  exec(`tmux select-pane -t ${sanitize(paneId)} -T '${safeName}'`);
   return paneId;
 }
 
 export function sendKeys(paneId: string, text: string): void {
-  // Use tmux load-buffer + paste-buffer for reliable text delivery
-  const escaped = text.replace(/'/g, "'\\''");
-  exec(`tmux send-keys -t ${paneId} '${escaped}' Enter`);
+  const escaped = shellEscape(text);
+  exec(`tmux send-keys -t ${sanitize(paneId)} '${escaped}' Enter`);
 }
 
 export function capturePaneOutput(
@@ -37,32 +50,32 @@ export function capturePaneOutput(
   scrollback = 5000,
 ): string {
   return execSafe(
-    `tmux capture-pane -t ${paneId} -p -S -${scrollback}`,
+    `tmux capture-pane -t ${sanitize(paneId)} -p -S -${scrollback}`,
   ) ?? '';
 }
 
 export function clearHistory(paneId: string): void {
-  execSafe(`tmux clear-history -t ${paneId}`);
+  execSafe(`tmux clear-history -t ${sanitize(paneId)}`);
 }
 
 export function sendCtrlC(paneId: string): void {
-  execSafe(`tmux send-keys -t ${paneId} C-c`);
+  execSafe(`tmux send-keys -t ${sanitize(paneId)} C-c`);
 }
 
 export function killPane(paneId: string): void {
-  execSafe(`tmux kill-pane -t ${paneId}`);
+  execSafe(`tmux kill-pane -t ${sanitize(paneId)}`);
 }
 
 export function pasteFile(paneId: string, filePath: string): void {
-  exec(`tmux load-buffer '${filePath}'`);
-  exec(`tmux paste-buffer -t ${paneId}`);
-  // Codex TUI needs multiple Enter presses after multi-line paste:
-  // 1st Enter: may be consumed as line break in input
-  // 2nd Enter: submits the prompt
+  const safePaneId = sanitize(paneId);
+  const safeFilePath = sanitize(filePath);
+  exec(`tmux load-buffer '${safeFilePath}'`);
+  exec(`tmux paste-buffer -t ${safePaneId}`);
+  // Codex TUI needs multiple Enter presses after multi-line paste
   execSync('sleep 0.5', { timeout: 5000 });
-  exec(`tmux send-keys -t ${paneId} Enter`);
+  exec(`tmux send-keys -t ${safePaneId} Enter`);
   execSync('sleep 0.3', { timeout: 5000 });
-  exec(`tmux send-keys -t ${paneId} Enter`);
+  exec(`tmux send-keys -t ${safePaneId} Enter`);
 }
 
 export function paneExists(paneId: string): boolean {
