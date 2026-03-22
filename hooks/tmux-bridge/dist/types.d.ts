@@ -28,7 +28,6 @@ export interface MarkerSearchResult {
 }
 export type Registry = Record<string, RegistryEntry>;
 export declare const PROVIDER_COMMANDS: Record<string, string>;
-export declare const PROMPT_FILE_THRESHOLD = 500;
 export declare const DEFAULT_POLL_INTERVAL = 2000;
 export declare const DEFAULT_POLL_TIMEOUT = 300;
 export declare const REGISTRY_DIR = "/tmp/hive-tmux";

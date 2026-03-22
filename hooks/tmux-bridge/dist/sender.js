@@ -1,33 +1,29 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { sendKeys, clearHistory } from './tmux.js';
-import { PROVIDER_COMMANDS, PROMPT_FILE_THRESHOLD, REGISTRY_DIR } from './types.js';
-function buildMarkerInstruction(marker) {
-    return `응답 마지막 줄에 반드시 ${marker} 를 그대로 출력해.`;
-}
+import { PROVIDER_COMMANDS, REGISTRY_DIR } from './types.js';
+const PROMPT_FILE = 'prompt.txt';
 function savePromptFile(name, content) {
-    const filePath = join(REGISTRY_DIR, `${name}-prompt.txt`);
+    const filePath = join(REGISTRY_DIR, `${name}-${PROMPT_FILE}`);
     writeFileSync(filePath, content);
     return filePath;
 }
 export function sendInitial(paneId, prompt, marker, provider, name) {
-    const fullPrompt = `${prompt} ${buildMarkerInstruction(marker)}`;
+    // Save full prompt (with marker instruction) to file
+    const markerLine = `\n\n응답 마지막 줄에 반드시 ${marker} 를 그대로 출력해.`;
+    const filePath = savePromptFile(name, prompt + markerLine);
+    // Outer command uses only the fixed file path — no user input interpolated
     const providerCmd = PROVIDER_COMMANDS[provider] ?? provider;
-    // Always use file-based delivery to avoid shell injection
-    const filePath = savePromptFile(name, fullPrompt);
-    const fileCmd = `${providerCmd} "파일 ${filePath} 의 내용을 읽고 그 지시에 따라 작업하세요. ${buildMarkerInstruction(marker)}"`;
-    sendKeys(paneId, fileCmd);
+    const safeCmd = `${providerCmd} '${filePath}'`;
+    sendKeys(paneId, safeCmd);
 }
 export function sendFollowup(paneId, prompt, marker, name) {
     clearHistory(paneId);
-    const fullPrompt = `${prompt} ${buildMarkerInstruction(marker)}`;
-    if (fullPrompt.length > PROMPT_FILE_THRESHOLD) {
-        const filePath = savePromptFile(name, fullPrompt);
-        sendKeys(paneId, `파일 ${filePath} 를 읽고 그 지시에 따라 작업하세요. ${buildMarkerInstruction(marker)}`);
-    }
-    else {
-        sendKeys(paneId, fullPrompt);
-    }
+    // Save followup prompt to file
+    const markerLine = `\n\n응답 마지막 줄에 반드시 ${marker} 를 그대로 출력해.`;
+    const filePath = savePromptFile(name, prompt + markerLine);
+    // Send file path as prompt text to running codex TUI
+    sendKeys(paneId, `파일 ${filePath} 를 읽고 지시에 따라 작업하세요.`);
     // Extra Enter for codex TUI submission
     setTimeout(() => {
         try {

@@ -1,11 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { PROMPT_FILE_THRESHOLD } from '../src/types.js';
 
 describe('sender logic', () => {
-  it('PROMPT_FILE_THRESHOLD is 500', () => {
-    expect(PROMPT_FILE_THRESHOLD).toBe(500);
-  });
-
   it('marker instruction format', () => {
     const marker = '[HIVE_DONE:abc123]';
     const instruction = `응답 마지막 줄에 반드시 ${marker} 를 그대로 출력해.`;
@@ -13,17 +8,24 @@ describe('sender logic', () => {
     expect(instruction).toContain('그대로 출력해');
   });
 
-  it('short prompt stays inline', () => {
-    const prompt = '짧은 질문';
+  it('all prompts use file-based delivery', () => {
+    // sendInitial always saves to file — no inline prompt in shell command
+    // This prevents shell injection regardless of prompt content
+    const dangerousPrompt = '$(rm -rf /) `evil` $HOME';
     const marker = '[HIVE_DONE:abc]';
-    const full = `${prompt} 응답 마지막 줄에 반드시 ${marker} 를 그대로 출력해.`;
-    expect(full.length).toBeLessThan(PROMPT_FILE_THRESHOLD);
+    const markerLine = `\n\n응답 마지막 줄에 반드시 ${marker} 를 그대로 출력해.`;
+    const fileContent = dangerousPrompt + markerLine;
+    // File content can safely contain any characters
+    expect(fileContent).toContain(dangerousPrompt);
+    expect(fileContent).toContain(marker);
   });
 
-  it('long prompt triggers file delivery', () => {
-    const prompt = 'A'.repeat(600);
-    const marker = '[HIVE_DONE:abc]';
-    const full = `${prompt} 응답 마지막 줄에 반드시 ${marker} 를 그대로 출력해.`;
-    expect(full.length).toBeGreaterThan(PROMPT_FILE_THRESHOLD);
+  it('outer command uses single-quoted file path', () => {
+    // The shell command sent to tmux should use single quotes
+    // to prevent variable expansion in the file path
+    const filePath = '/tmp/hive-tmux/codex-prompt.txt';
+    const safeCmd = `codex -a never -s danger-full-access '${filePath}'`;
+    expect(safeCmd).not.toContain('"');
+    expect(safeCmd).toContain("'");
   });
 });

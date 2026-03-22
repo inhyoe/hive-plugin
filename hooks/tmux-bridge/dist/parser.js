@@ -57,16 +57,35 @@ export function extractCurrentRound(raw, markerLineNumber) {
     const start = promptLine + 1;
     const end = markerLineNumber;
     const content = lines.slice(start, end);
-    // Skip leading empty lines only — preserve all content lines
-    // (responses may start with • or plain text)
-    let firstContentIdx = 0;
+    // Skip prompt echo continuation lines:
+    // After ›, codex TUI may wrap the prompt across multiple lines.
+    // These are non-• lines that appear before the first • response line.
+    // Also skip leading empty lines.
+    let firstResponseIdx = 0;
+    let foundResponse = false;
     for (let i = 0; i < content.length; i++) {
-        if (content[i].trim() !== '') {
-            firstContentIdx = i;
+        const trimmed = content[i].trim();
+        if (trimmed === '')
+            continue;
+        if (trimmed.startsWith('•')) {
+            firstResponseIdx = i;
+            foundResponse = true;
             break;
         }
     }
-    const responseContent = content.slice(firstContentIdx);
+    // If no • found, the response is plain text — find first non-empty line
+    // after the prompt echo block (lines that look like continuation of ›)
+    if (!foundResponse) {
+        // Take all non-empty content as response
+        firstResponseIdx = 0;
+        for (let i = 0; i < content.length; i++) {
+            if (content[i].trim() !== '') {
+                firstResponseIdx = i;
+                break;
+            }
+        }
+    }
+    const responseContent = content.slice(firstResponseIdx);
     // Filter noise and clean up
     const cleaned = responseContent
         .filter((line) => !isNoiseLine(line))
