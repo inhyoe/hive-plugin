@@ -4,4 +4,5 @@ export declare function capturePaneOutput(paneId: string, scrollback?: number): 
 export declare function clearHistory(paneId: string): void;
 export declare function sendCtrlC(paneId: string): void;
 export declare function killPane(paneId: string): void;
+export declare function pasteFile(paneId: string, filePath: string): void;
 export declare function paneExists(paneId: string): boolean;

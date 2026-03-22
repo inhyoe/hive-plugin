@@ -1,6 +1,7 @@
-import { spawnPane, sendCtrlC, killPane } from './tmux.js';
+import { spawnPane, sendKeys, sendCtrlC, killPane } from './tmux.js';
 import * as registry from './registry.js';
 import type { SpawnOptions, RegistryEntry } from './types.js';
+import { PROVIDER_COMMANDS } from './types.js';
 
 export function spawnProvider(options: SpawnOptions): RegistryEntry {
   const paneId = spawnPane(
@@ -8,6 +9,14 @@ export function spawnProvider(options: SpawnOptions): RegistryEntry {
     options.session,
     options.historyLimit ?? 10_000,
   );
+
+  // Launch provider TUI without prompt
+  const providerCmd = PROVIDER_COMMANDS[options.provider] ?? options.provider;
+  sendKeys(paneId, providerCmd);
+
+  // Wait for TUI to be ready
+  const start = Date.now();
+  while (Date.now() - start < 2000) { /* busy wait for TUI init */ }
 
   const entry: RegistryEntry = {
     paneId,

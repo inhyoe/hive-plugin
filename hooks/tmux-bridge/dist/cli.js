@@ -180,10 +180,17 @@ async function main() {
         }
         case 'status': {
             const all = args['reconcile'] ? registry.reconcile() : registry.list();
-            console.log(JSON.stringify(all, null, 2));
-            // Exit 1 if no providers are registered (for Phase 6 fallback detection)
-            if (Object.keys(all).length === 0) {
-                process.exit(1);
+            if (args['provider']) {
+                const found = Object.values(all).some((entry) => entry.provider === args['provider']);
+                if (!found)
+                    process.exit(1);
+                const entries = Object.fromEntries(Object.entries(all).filter(([, e]) => e.provider === args['provider']));
+                console.log(JSON.stringify(entries, null, 2));
+            }
+            else {
+                console.log(JSON.stringify(all, null, 2));
+                if (Object.keys(all).length === 0)
+                    process.exit(1);
             }
             break;
         }

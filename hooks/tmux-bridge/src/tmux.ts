@@ -53,6 +53,11 @@ export function killPane(paneId: string): void {
   execSafe(`tmux kill-pane -t ${paneId}`);
 }
 
+export function pasteFile(paneId: string, filePath: string): void {
+  exec(`tmux load-buffer '${filePath}'`);
+  exec(`tmux paste-buffer -t ${paneId}`);
+}
+
 export function paneExists(paneId: string): boolean {
   const result = execSafe(
     `tmux list-panes -a -F '#{pane_id}'`,

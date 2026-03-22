@@ -31,23 +31,53 @@ export function isNoiseLine(line) {
 }
 export function findMarker(raw, marker) {
     const lines = raw.split('\n');
-    // Find the last • response line — marker must be AFTER a response block
-    let lastResponseLine = -1;
-    for (let i = lines.length - 1; i >= 0; i--) {
-        if (/^\s*•\s/.test(lines[i])) {
-            lastResponseLine = i;
+    // Collect all prompt line (›) indices
+    const promptLines = [];
+    for (let i = 0; i < lines.length; i++) {
+        if (/^\s*›\s/.test(lines[i])) {
+            promptLines.push(i);
+        }
+    }
+    // Determine response region boundaries
+    // The response lives between the user's prompt (› line) and the next idle › line.
+    // With ≥2 prompt lines: search between second-to-last and last › line
+    // With 1 prompt line: search after that › line to end
+    // With 0 prompt lines: search entire output
+    let responseStart = 0;
+    let responseEnd = lines.length - 1;
+    if (promptLines.length >= 2) {
+        const userPromptLine = promptLines[promptLines.length - 2];
+        const idlePromptLine = promptLines[promptLines.length - 1];
+        // Response starts after the user prompt line + empty lines
+        responseStart = userPromptLine + 1;
+        for (let i = responseStart; i < idlePromptLine; i++) {
+            const trimmed = lines[i].trim();
+            if (trimmed === '') {
+                responseStart = i + 1;
+                continue;
+            }
+            break;
+        }
+        responseEnd = idlePromptLine - 1;
+    }
+    else if (promptLines.length === 1) {
+        responseStart = promptLines[0] + 1;
+        for (let i = responseStart; i < lines.length; i++) {
+            const trimmed = lines[i].trim();
+            if (trimmed === '') {
+                responseStart = i + 1;
+                continue;
+            }
             break;
         }
     }
-    // Search backwards from the end, but only accept markers AFTER last • line
-    for (let i = lines.length - 1; i >= 0; i--) {
-        const line = lines[i];
-        if (!line.includes(marker))
-            continue;
-        // Must be after at least one response line
-        if (lastResponseLine === -1 || i < lastResponseLine)
-            continue;
-        return { found: true, lineNumber: i };
+    // Search for marker in response region only (reverse)
+    for (let i = responseEnd; i >= responseStart; i--) {
+        if (lines[i].includes(marker)) {
+            if (/gpt-\d+\.\d+.*left/.test(lines[i]))
+                continue;
+            return { found: true, lineNumber: i };
+        }
     }
     return { found: false, lineNumber: -1 };
 }
@@ -65,35 +95,15 @@ export function extractCurrentRound(raw, markerLineNumber) {
     const start = promptLine + 1;
     const end = markerLineNumber;
     const content = lines.slice(start, end);
-    // Skip prompt echo continuation lines:
-    // After ›, codex TUI may wrap the prompt across multiple lines.
-    // These are non-• lines that appear before the first • response line.
-    // Also skip leading empty lines.
-    let firstResponseIdx = 0;
-    let foundResponse = false;
+    // Skip leading empty lines
+    let firstContentIdx = 0;
     for (let i = 0; i < content.length; i++) {
-        const trimmed = content[i].trim();
-        if (trimmed === '')
-            continue;
-        if (trimmed.startsWith('•')) {
-            firstResponseIdx = i;
-            foundResponse = true;
+        if (content[i].trim() !== '') {
+            firstContentIdx = i;
             break;
         }
     }
-    // If no • found, the response is plain text — find first non-empty line
-    // after the prompt echo block (lines that look like continuation of ›)
-    if (!foundResponse) {
-        // Take all non-empty content as response
-        firstResponseIdx = 0;
-        for (let i = 0; i < content.length; i++) {
-            if (content[i].trim() !== '') {
-                firstResponseIdx = i;
-                break;
-            }
-        }
-    }
-    const responseContent = content.slice(firstResponseIdx);
+    const responseContent = content.slice(firstContentIdx);
     // Filter noise and clean up
     const cleaned = responseContent
         .filter((line) => !isNoiseLine(line))

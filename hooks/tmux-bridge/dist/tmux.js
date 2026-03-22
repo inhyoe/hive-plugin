@@ -34,6 +34,10 @@ export function sendCtrlC(paneId) {
 export function killPane(paneId) {
     execSafe(`tmux kill-pane -t ${paneId}`);
 }
+export function pasteFile(paneId, filePath) {
+    exec(`tmux load-buffer '${filePath}'`);
+    exec(`tmux paste-buffer -t ${paneId}`);
+}
 export function paneExists(paneId) {
     const result = execSafe(`tmux list-panes -a -F '#{pane_id}'`);
     if (!result)

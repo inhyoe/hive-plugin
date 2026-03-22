@@ -168,6 +168,51 @@ describe('findMarker', () => {
     const result = findMarker(CODEX_SAMPLE_WITH_TOOLS, '[HIVE_DONE:t2_999]');
     expect(result.found).toBe(true);
   });
+
+  it('finds marker in plain-text response (no • bullets)', () => {
+    const plainTextResponse = `› Review this code.
+
+
+NO ISSUES FOUND
+
+  [HIVE_DONE:plain_test]
+
+
+› Run /review on my current changes
+
+  gpt-5.4 high · 96% left · ~/path`;
+    const result = findMarker(plainTextResponse, '[HIVE_DONE:plain_test]');
+    expect(result.found).toBe(true);
+    // Should NOT match the status bar line
+    const lines = plainTextResponse.split('\n');
+    expect(lines[result.lineNumber]).toContain('[HIVE_DONE:plain_test]');
+    expect(lines[result.lineNumber]).not.toContain('gpt-');
+  });
+
+  it('ignores marker in prompt echo region', () => {
+    const withPromptEcho = `╰─ codex -a never "prompt with [HIVE_DONE:echo_test]"
+╭────────────────────────────────────────────╮
+│ >_ OpenAI Codex (v0.116.0)                 │
+╰────────────────────────────────────────────╯
+
+› prompt with [HIVE_DONE:echo_test]
+
+
+• Response content here
+
+  [HIVE_DONE:echo_test]
+
+
+› Idle prompt
+
+  gpt-5.4 high · 96% left · ~/path`;
+    const result = findMarker(withPromptEcho, '[HIVE_DONE:echo_test]');
+    expect(result.found).toBe(true);
+    // Must find the one AFTER the • response, not the prompt echo
+    const lines = withPromptEcho.split('\n');
+    const markerLine = lines[result.lineNumber]!;
+    expect(markerLine.trim()).toBe('[HIVE_DONE:echo_test]');
+  });
 });
 
 describe('extractCurrentRound', () => {

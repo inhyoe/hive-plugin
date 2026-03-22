@@ -68,7 +68,7 @@ P1 사전검증 → P2 리뷰요청 → P3 수정+검증 → P4 완료
    diff 내용을 `/tmp/auto-review-diff.txt`에 저장 후 실행. 출력을 `review_prompt`로 사용.
 3. 실행:
    ```bash
-   Bash("./scripts/tmux-ask.sh codex '{review_prompt}'")
+   Bash("./scripts/tmux-ask.sh codex '{review_prompt}' --purpose review --base {base_branch}")
    ```
 4. 출력: `Auto Review Loop 시작 — Codex processing...`
 5. **턴 즉시 종료** (Async Guardrail 준수).
@@ -120,7 +120,7 @@ P1 사전검증 → P2 리뷰요청 → P3 수정+검증 → P4 완료
      ```
    - 실행:
      ```bash
-     Bash("./scripts/tmux-ask.sh codex '{verify_prompt}'")
+     Bash("./scripts/tmux-ask.sh codex '{verify_prompt}' --purpose verify")
      ```
    - 출력: `Auto Review Loop — Iteration {N}/{max} — Codex processing...`
    - **턴 즉시 종료**.
