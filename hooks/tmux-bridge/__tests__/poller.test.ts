@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdirSync, writeFileSync, rmSync, utimesSync } from 'node:fs';
 
 const testDir = '/tmp/hive-tmux-test-poller';
 
@@ -32,15 +32,16 @@ describe('poller (real module)', () => {
     try { rmSync(testDir, { recursive: true }); } catch { /* ok */ }
   });
 
-  it('returns done when response file exists', async () => {
-    writeFileSync(`${testDir}/test-response.txt`, 'AGREE — task complete');
+  it('returns done when response file appears after poll starts', async () => {
+    // Simulate real flow: file appears AFTER poll begins (codex writes it)
+    setTimeout(() => writeFileSync(`${testDir}/test-response.txt`, 'AGREE — task complete'), 100);
     const result = await poll('%42', '', 2, 50, 'test');
     expect(result.status).toBe('done');
     expect(result.response).toContain('AGREE');
   });
 
   it('extracts token remaining from pane output', async () => {
-    writeFileSync(`${testDir}/test-response.txt`, 'response content');
+    setTimeout(() => writeFileSync(`${testDir}/test-response.txt`, 'response content'), 100);
     const result = await poll('%42', '', 2, 50, 'test');
     expect(result.tokenRemaining).toBe('95% left');
   });
@@ -59,6 +60,16 @@ describe('poller (real module)', () => {
   it('ignores whitespace-only response file', async () => {
     writeFileSync(`${testDir}/ws-response.txt`, '   \n  \n  ');
     const result = await poll('%42', '', 1, 50, 'ws');
+    expect(result.status).toBe('timeout');
+  });
+
+  it('rejects stale response file (mtime before poll start)', async () => {
+    const respFile = `${testDir}/stale-response.txt`;
+    writeFileSync(respFile, 'old stale content');
+    // Set mtime to 10 seconds ago
+    const past = new Date(Date.now() - 10000);
+    utimesSync(respFile, past, past);
+    const result = await poll('%42', '', 1, 50, 'stale');
     expect(result.status).toBe('timeout');
   });
 });
