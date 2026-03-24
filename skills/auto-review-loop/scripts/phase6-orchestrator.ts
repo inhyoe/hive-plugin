@@ -2,7 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import type { Phase6Result } from "./lib/types";
 import { collectFiles } from "./diff-collector";
-import { buildFileReviewPrompt, buildClaudeTeamPrompt } from "./prompt-builder";
+import { buildFileReviewPrompt, buildClaudeTeamPrompt, buildCodeReviewerPrompt } from "./prompt-builder";
 
 function validateEntry(): { valid: boolean; reason?: string } {
   // G7 marker check
@@ -79,20 +79,24 @@ if (import.meta.main) {
     process.exit(0);
   }
 
-  // 3. Select reviewer
+  // 3. Select reviewer — always include code-reviewer
   const codexAvailable = checkCodexAvailable();
-  const reviewer = codexAvailable ? "codex" : "claude-team";
+  const baseReviewer = codexAvailable ? "codex" : "claude-team";
+  const reviewer = `${baseReviewer}+code-reviewer` as Phase6Result["reviewer"];
 
-  // 4. Build prompt
-  const prompt = reviewer === "codex"
+  // 4. Build prompts
+  const prompt = baseReviewer === "codex"
     ? buildFileReviewPrompt(collected.files)
     : buildClaudeTeamPrompt(collected.files, collected.reviewDir);
+
+  const codeReviewerPrompt = buildCodeReviewerPrompt(collected.files, base);
 
   const result: Phase6Result = {
     reviewer,
     files: collected.files,
     reviewDir: collected.reviewDir,
     prompt,
+    codeReviewerPrompt,
     entryValid: true,
   };
 
