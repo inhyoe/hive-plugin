@@ -4,6 +4,26 @@ export interface ReviewIssue {
   description: string;
 }
 
+export interface CodeReviewerIssue {
+  id: string;
+  file?: string;
+  line?: number;
+  description: string;
+  severity: "critical" | "important";
+}
+
+export interface CodeReviewerResult {
+  hasIssues: boolean;
+  issues: CodeReviewerIssue[];
+  raw: string;
+}
+
+export interface DualReviewResult {
+  codex: ParsedReview;
+  codeReviewer: CodeReviewerResult;
+  merged: ReviewIssue[];
+}
+
 export interface ParsedReview {
   hasIssues: boolean;
   issues: ReviewIssue[];
@@ -42,10 +62,11 @@ export interface FileCollectResult {
 }
 
 export interface Phase6Result {
-  reviewer: "codex" | "claude-team";
+  reviewer: "codex" | "claude-team" | "codex+code-reviewer" | "claude-team+code-reviewer";
   files: string[];
   reviewDir: string;
   prompt: string;
+  codeReviewerPrompt?: string;
   entryValid: boolean;
   error?: string;
 }
