@@ -328,7 +328,13 @@ if (import.meta.main) {
     const issuesPath = issuesIdx !== -1 ? args[issuesIdx + 1] : null;
     let issues: Array<{file?: string; line?: number; description: string}> = [];
     if (issuesPath) {
-      issues = JSON.parse(await Bun.file(issuesPath).text());
+      try {
+        const raw = JSON.parse(await Bun.file(issuesPath).text());
+        issues = Array.isArray(raw) ? raw : (raw && typeof raw === "object" && Array.isArray(raw.issues)) ? raw.issues : [];
+      } catch (e) {
+        console.error(`Failed to parse issues file '${issuesPath}': ${e instanceof Error ? e.message : e}`);
+        process.exit(1);
+      }
     }
     console.log(buildCodeReviewerVerifyPrompt(issues, diff));
   } else {

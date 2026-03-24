@@ -2,7 +2,7 @@ import type { CodeReviewerIssue, CodeReviewerResult } from "./lib/types";
 
 type Severity = CodeReviewerIssue["severity"];
 
-const SECTION_HEADER = /^###\s+(CRITICAL|IMPORTANT|SUGGESTION)/i;
+const SECTION_HEADER = /^###\s+(CRITICAL|IMPORTANT|SUGGESTIONS?)/i;
 
 // **C1. [file:line] description**  or  **I2. [file:line] description**
 const BOLD_DOT_PATTERN =
