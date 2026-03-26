@@ -17,4 +17,162 @@ Dynamic: `{{ROUND_NUM}}` `{{WAVE_NUM}}` `{{FILE_PATH_N}}` `{{FILE_N_CONTENT}}` (
 
 ## Context Budget
 
-리드=비즈니스+아키 | Claude=심볼+설계 | Codex=수정코드 | Gemini=요약+패턴
+## 1. 변수 정의
+
+> **Note**: 아래 `{{VAR}}` 변수들은 Claude Code 공식 변수(`$ARGUMENTS`, `${CLAUDE_SKILL_DIR}` 등)가 아닌
+> **리드(오케스트레이터)가 런타임에 직접 치환**하는 커스텀 플레이스홀더입니다.
+> 리드는 Phase 1-4에서 수집한 데이터로 각 변수를 실제 값으로 대체한 뒤 에이전트에게 전송합니다.
+
+### 정적 변수
+
+| 변수 | 설명 | 소스 |
+|------|------|------|
+| `{{TEAM_NAME}}` | 팀 이름 (hive-{id}) | Phase 3 팀 구성 |
+| `{{TEAM_ID}}` | 팀 ID (T1, T2, ...) | Phase 3 팀 구성 |
+| `{{AGENT_NAME}}` | 에이전트 이름 | Phase 3 팀 구성 |
+| `{{MODEL}}` | sonnet/opus/haiku | Phase 3 프로바이더 배치 |
+| `{{MODULE_NAME}}` | 담당 모듈명 | Phase 2 영향 범위 맵 |
+| `{{MODULE_FILES}}` | 담당 파일 목록 | Phase 2 영향 범위 맵 |
+| `{{MODULE_SYMBOLS}}` | 핵심 심볼 목록 | Phase 2 Serena 결과 |
+| `{{DEPENDENCIES}}` | 의존 모듈 목록 | Phase 2 의존성 맵 |
+| `{{TASK_PROPOSAL}}` | TASK PROPOSAL 전문 | Phase 4 합의 시작 시 |
+| `{{CONSENSUS}}` | CONSENSUS 문서 전문 | Phase 4 합의 완료 후 |
+| `{{REQUIREMENTS}}` | 요구사항 요약 | Phase 1 결과 |
+| `{{PRIOR_CONSENSUS}}` | 선행 팀 합의 (의존성) | Phase 4 크로스 의존성 |
+
+### 동적 변수 (런타임 생성)
+
+| 변수 | 설명 | 소스 |
+|------|------|------|
+| `{{ROUND_NUM}}` | 합의 라운드 번호 (1-5) | Phase 4 합의 루프 카운터 |
+| `{{WAVE_NUM}}` | 실행 Wave 번호 (1-N) | Phase 5 Wave 실행 순서 |
+| `{{FILE_PATH_N}}` | 수정 대상 파일 경로 (N=1,2,..., **최대 5**) | Phase 5 Codex 구현 시 리드가 동적 생성. 6개 이상이면 2회로 분할 전송 |
+| `{{FILE_N_CONTENT}}` | 수정 대상 파일 내용 (N=1,2,..., **최대 5**) | Phase 5 Codex 구현 시 리드가 Read로 수집. 대형 파일은 관련 섹션만 발췌 |
+
+---
+
+## 2. 컨텍스트 예산 원칙 (Context Budget — Zero-Sum)
+
+> 컨텍스트 윈도우는 제로섬이다. 코드로 채우면 비즈니스 컨텍스트가 사라지고, 비즈니스로 채우면 코드 공간이 없다.
+
+| 역할 | 컨텍스트 우선 | 포함 | 제외 |
+|------|-------------|------|------|
+| 리드 (오케스트레이터) | 비즈니스 + 아키텍처 | 요구사항, 의존성 맵, CONSENSUS, 팀 상태 | 전체 파일 내용 (Serena 심볼로 대체) |
+| Claude 에이전트 | 모듈 심볼 + 설계 | MODULE_SYMBOLS, DEPENDENCIES, CONSENSUS | 무관한 모듈 코드, 전체 프로젝트 구조 |
+| Codex 에이전트 | 수정 대상 코드 | 함수/클래스 코드, 타입 시그니처, import | 아키텍처 설명, 비즈니스 컨텍스트, 무관 파일 |
+| Gemini 에이전트 | 요약 + 패턴 | 요구사항 요약, 참조 테스트 패턴, 체크리스트 | 전체 코드, 상세 심볼 정보 |
+
+**적용 시점**: Phase 5에서 spawn-templates 변수 치환 시 이 예산을 기준으로 컨텍스트 양을 조절한다.
+
+---
+
+## 3. Variable Sourcing 알고리즘
+
+리드가 `{{FILE_PATH_N}}`과 `{{FILE_N_CONTENT}}`를 선택하는 기준.
+
+### 3-1. 파일 선택 우선순위
+
+```
+1순위: Phase 2 Serena 영향 범위 맵의 수정 대상 파일
+2순위: 의존성 그래프의 인터페이스/타입 파일 (import되는 시그니처)
+3순위: 기존 테스트 파일 (패턴 참조용)
+4순위: 설정/라우트 파일 (변경이 필요한 경우)
+```
+
+### 3-2. 파일 수 제한 및 분할
+
+```
+5개 이하: 단일 /ask로 전송
+6-10개: 2회 분할 (1차: foundation, 2차: feature)
+11개+: 팀 재분할 검토 (Phase 3 재진입 권장)
+```
+
+### 3-3. 콘텐츠 발췌 기준
+
+```
+200줄 이하: 전체 포함
+200줄 초과: 관련 섹션만 발췌
+  - 수정 대상 함수/클래스 ± 10줄 컨텍스트
+  - import 블록 전체
+  - 참조되는 타입 정의
+  - "// ... (생략)" 마커로 생략 위치 표시
+```
+
+---
+
+## 4. 리드 행동 가이드
+
+### 4-1. 합의 단계 리드 동작 (양방향 대화 필수)
+
+```
+1. 팀 레지스트리 생성 (mkdir -p .hive-state/consensus)
+
+2. 독립 팀들에게 동시 TASK PROPOSAL 전송 (구현 지시 포함 금지):
+   - Claude: Agent tool (합의 프롬프트 — templates/claude-agent.md §1 사용)
+   - Codex: $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex (합의 프롬프트 — templates/codex-agent.md §1 사용)
+   - Gemini: $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh gemini (합의 프롬프트 — templates/gemini-agent.md §1 사용)
+   이 단계에서 구현을 함께 지시하면 안 됨
+
+3. 응답 수신 + 리드 응답 (MANDATORY):
+   Claude 에이전트:
+     - SendMessage 자동 수신
+     - 마커 파싱 (AGREE/COUNTER/CLARIFY)
+     - 리드 → SendMessage(recipient=에이전트명, content=응답)
+   tmux-bridge 에이전트:
+     - $HIVE_PLUGIN_DIR/scripts/tmux-pend.sh codex --marker "$MARKER" 로 수집
+     - 마커 파싱 (round_id/team_id 확인)
+     - AGREE → CONSENSUS 문서 생성 (tmux-bridge에 확인 메시지 불필요 — stateless)
+     - COUNTER → $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 재제안: ..."
+     - CLARIFY → $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 추가 정보: ..."
+
+4. 응답별 리드 행동:
+   Claude 에이전트:
+     AGREE:
+       → CONSENSUS 문서 생성
+       → SendMessage: "CONSENSUS가 확정되었습니다: {요약}"
+     COUNTER:
+       → 반론 검토 (수용/부분수용/거절)
+       → SendMessage: 수정 PROPOSAL + 근거
+       → 에이전트 재응답 대기
+     CLARIFY:
+       → 추가 정보 제공
+       → SendMessage: 답변 + "검토 후 다시 응답해주세요"
+       → 에이전트 재응답 대기
+   tmux-bridge 에이전트:
+     AGREE → CONSENSUS 문서 생성 (확인 메시지 불필요 — tmux-bridge는 stateless)
+     COUNTER → $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 재제안: ..."
+     CLARIFY → $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 추가 정보: ..."
+
+5. 합의 루프 반복 (max 5 rounds)
+6. 전체 CONSENSUS 도달 → Phase 5로
+
+금지: 에이전트 응답 무시하고 바로 Phase 5 진입
+금지: 합의 프롬프트에 "문제 찾아서 수정해줘" 포함
+```
+
+### 4-2. 구현 단계 리드 동작
+
+```
+0. 사전 준비 (에이전트 스폰 전):
+   - $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh gemini "리서치/체크리스트 요청" → 결과를 에이전트 프롬프트 "기준"으로 포함
+   - $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex "아키텍처 사전 리뷰 요청" → 결과를 에이전트 지침에 반영
+
+1. Wave별 실행 (순서 중요 — tmux-bridge async guardrail 준수):
+   Step A: Claude 에이전트 먼저 스폰 — Agent tool (worktree isolation, 병렬)
+   Step B: tmux-bridge 호출 — $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex (파일 내용 + 구체적 수정 지시 + round_id)
+           → HIVE_ASYNC_SUBMITTED 시 턴 종료
+   Step C: 다음 턴에서 $HIVE_PLUGIN_DIR/scripts/tmux-pend.sh codex --marker "$MARKER" 수집 후, $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh gemini (테스트/문서 작업)
+   필수: 대규모(6+) Codex 최소 2개, 중소(3-5) 최소 1개 모듈 직접 구현
+
+2. 결과 수집:
+   - Claude: SendMessage 수신
+   - tmux-bridge: $HIVE_PLUGIN_DIR/scripts/tmux-pend.sh codex/gemini --marker "$MARKER" 수집 (HIVE_DONE marker 확인)
+
+3. 교차 검증:
+   - Codex → Claude 수정 코드 리뷰
+   - Claude → Codex 수정 코드 검증
+   교차 리뷰가 아닌 교차 구현 + 교차 검증
+
+4. Wave 완료 → 다음 Wave
+5. 모든 Wave 완료 → 통합 커밋 → 셧다운
+```

@@ -1,25 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# test_ccb.py — CCB bridge connectivity test
-# Validates ccb-ping reachability for configured providers.
+# test_connectivity.py — tmux-bridge provider connectivity test
+# Validates tmux-bridge reachability for configured providers.
 
 import subprocess
-import shutil
 import argparse
 import sys
+import os
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Test CCB bridge connectivity.')
+    parser = argparse.ArgumentParser(description='Test tmux-bridge provider connectivity.')
     parser.add_argument('--providers', default='codex,gemini',
                         help='Comma-separated list of providers to test.')
     args = parser.parse_args()
 
     providers = [p.strip() for p in args.providers.split(',')]
 
-    # 1. Check if ccb-ping exists
-    if not shutil.which('ccb-ping'):
-        print('[WARN] ccb-ping not found — CCB tests skipped')
+    # 1. Check if tmux-bridge CLI exists
+    cli_path = os.path.join(os.path.dirname(__file__), '..', 'hooks', 'tmux-bridge', 'dist', 'cli.js')
+    if not os.path.isfile(cli_path):
+        print('[WARN] tmux-bridge CLI not found — connectivity tests skipped')
         sys.exit(0)
 
     mounted_count = 0
@@ -29,11 +30,11 @@ def main():
     for provider in providers:
         try:
             result = subprocess.run(
-                ['ccb-ping', provider],
+                ['node', cli_path, 'status', '--provider', provider],
                 capture_output=True, timeout=30
             )
             if result.returncode == 0:
-                print(f'[PASS] {provider} reachable')
+                print(f'[PASS] {provider} reachable via tmux-bridge')
                 mounted_count += 1
             else:
                 print(f'[WARN] {provider} unreachable (not blocking)')
@@ -45,7 +46,7 @@ def main():
     # 3. Summary
     print(f'--- Summary: Mounted {mounted_count}/{total_count} providers ---')
 
-    # Always exit 0 — CCB failures are warnings, not errors
+    # Always exit 0 — connectivity failures are warnings, not errors
     sys.exit(0)
 
 

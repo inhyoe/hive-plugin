@@ -30,19 +30,19 @@
   CLARIFY -> 추가 정보 제공 + "검토 후 다시 응답해주세요"
 ```
 
-### 9-2. CCB 에이전트 (Codex/Gemini) 응답 시
+### 9-2. tmux-bridge 에이전트 (Codex/Gemini) 응답 시
 
 ```
 pend로 응답 수집 -> 마커 파싱 (round_id/team_id 확인)
   |
-  AGREE -> CONSENSUS 문서 생성 (확인 메시지 불필요 — CCB는 stateless)
-  COUNTER -> 해당 프로바이더로 재응답 (/ask codex 또는 /ask gemini):
+  AGREE -> CONSENSUS 문서 생성 (확인 메시지 불필요 — tmux-bridge는 stateless)
+  COUNTER -> 해당 프로바이더로 재응답 (tmux-ask.sh codex 또는 tmux-ask.sh gemini):
              "[FOLLOW-UP — TX — RN] 재제안: ..."
   CLARIFY -> 해당 프로바이더로 재응답:
              "[FOLLOW-UP — TX — RN] 추가 정보: ..."
 ```
 
-**CCB는 stateless**: AGREE 시 별도 "확인" 메시지 불필요 (Claude Agent과 다름).
+**tmux-bridge는 stateless**: AGREE 시 별도 "확인" 메시지 불필요 (Claude Agent과 다름).
 
 ### 9-3. 구현 중 에이전트 질문/보고 시
 

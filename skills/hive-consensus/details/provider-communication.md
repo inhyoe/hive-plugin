@@ -5,19 +5,19 @@
 | Provider | 전송 방법 | 수신 방법 |
 |----------|----------|----------|
 | Claude (Agent) | SendMessage(recipient, content) | 자동 수신 (idle notification) |
-| Codex (CCB) | `Bash("CCB_CALLER=claude ask codex \"[TASK PROPOSAL — TX — R1] ...\"")` | `pend codex` |
-| Gemini (CCB) | `Bash("CCB_CALLER=claude ask gemini \"[TASK PROPOSAL — TX — R1] ...\"")` | `pend gemini` |
+| Codex (tmux-bridge) | `Bash("$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex \"[TASK PROPOSAL — TX — R1] ...\"")` | `$HIVE_PLUGIN_DIR/scripts/tmux-pend.sh codex` |
+| Gemini (tmux-bridge) | `Bash("$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh gemini \"[TASK PROPOSAL — TX — R1] ...\"")` | `$HIVE_PLUGIN_DIR/scripts/tmux-pend.sh gemini` |
 
-### CCB 프로바이더 합의 시 주의사항
+### tmux-bridge 프로바이더 합의 시 주의사항
 
 - 마커 기반 파싱: `[AGREE — {팀 ID}]`, `[COUNTER — {팀 ID}]`, `[CLARIFY — {팀 ID}]` 마커로 응답 유형 식별
-- `CCB_DONE` = 응답 완료
+- `HIVE_DONE` = 응답 완료
 - 마커 없이 응답이 오면 -> 전체 내용을 파싱하여 의도 추론
-- CCB Async Guardrail: `CCB_ASYNC_SUBMITTED` -> 턴 종료, pend로 나중에 수집
+- tmux-bridge Async Guardrail: `HIVE_ASYNC_SUBMITTED` -> 턴 종료, pend로 나중에 수집
 
-### CCB Correlation Keys (split-brain 방지)
+### tmux-bridge Correlation Keys (split-brain 방지)
 
-CCB는 stateless이므로, 지연/중복/순서역전 응답을 방지하기 위해 **필수 correlation key**를 포함한다:
+tmux-bridge는 stateless이므로, 지연/중복/순서역전 응답을 방지하기 위해 **필수 correlation key**를 포함한다:
 
 | Key | 형식 | 용도 |
 |-----|------|------|
@@ -36,10 +36,10 @@ follow-up: `[FOLLOW-UP — {team_id} — {round_id} — parent:{parent_round_id}
 - 이미 처리된 round_id의 응답이 다시 오면 무시 (idempotent)
 - 현재 라운드보다 이전 round_id 응답이 오면 무시 (stale)
 
-### CCB 라운드 타임아웃 정책
+### tmux-bridge 라운드 타임아웃 정책
 
 ```
-soft timeout: 3분 — pend 1회 확인, 미응답 시 /ask로 재요청
+soft timeout: 3분 — pend 1회 확인, 미응답 시 tmux-ask.sh로 재요청
 hard timeout: 10분 — 라운드 종료, LEAD DECISION으로 에스컬레이션
 pend 확인 간격: 최소 1분 (즉시 연속 확인 금지)
 ```
@@ -47,7 +47,7 @@ pend 확인 간격: 최소 1분 (즉시 연속 확인 금지)
 ### 동시 COUNTER + 타임아웃 충돌 해소
 
 ```
-CCB 에이전트가 COUNTER를 보냈으나 hard timeout도 동시에 도달한 경우:
+tmux-bridge 에이전트가 COUNTER를 보냈으나 hard timeout도 동시에 도달한 경우:
   1. pend로 응답이 이미 도착했으면 -> COUNTER 응답 우선 (타임아웃 무시)
   2. pend로 응답 미도착 + hard timeout -> LEAD DECISION 에스컬레이션
   3. LEAD DECISION 후 뒤늦게 COUNTER 도착 -> 무시 (stale response)

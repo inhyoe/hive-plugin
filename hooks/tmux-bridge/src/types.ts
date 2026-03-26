@@ -1,0 +1,54 @@
+export interface PollResult {
+  status: 'done' | 'working' | 'timeout';
+  response?: string;
+  tokenRemaining?: string;
+}
+
+export interface RegistryEntry {
+  paneId: string;
+  provider: 'codex' | 'gemini';
+  startedAt: string;
+  requestId?: string;
+  marker?: string;
+}
+
+export interface SpawnOptions {
+  provider: 'codex' | 'gemini';
+  name: string;
+  session?: string;
+  historyLimit?: number;
+}
+
+export interface SendOptions {
+  name: string;
+  prompt: string;
+  marker: string;
+  followup?: boolean;
+}
+
+export interface MarkerSearchResult {
+  found: boolean;
+  lineNumber: number;
+}
+
+export type Registry = Record<string, RegistryEntry>;
+
+export type Purpose = 'review' | 'verify' | 'consensus' | 'implement' | 'general';
+
+export const PROVIDER_COMMANDS: Record<string, string> = {
+  codex: 'codex -a never -s danger-full-access',
+  gemini: 'gemini',
+};
+
+export const DEFAULT_POLL_INTERVAL = 2000;
+export const DEFAULT_POLL_TIMEOUT = 300;
+export const REGISTRY_DIR = '/tmp/hive-tmux';
+export const REGISTRY_FILE = '/tmp/hive-tmux/sessions.json';
+
+/** Response file path for a given provider name */
+export function responseFilePath(name: string): string {
+  if (!/^[A-Za-z0-9_-]+$/.test(name)) {
+    throw new Error(`Invalid provider name: ${name}`);
+  }
+  return `${REGISTRY_DIR}/${name}-response.txt`;
+}

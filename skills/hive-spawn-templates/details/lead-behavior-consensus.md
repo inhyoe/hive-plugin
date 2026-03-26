@@ -5,8 +5,8 @@
 
 2. 독립 팀들에게 동시 TASK PROPOSAL 전송 (구현 지시 포함 금지):
    - Claude: Agent tool (합의 프롬프트 — templates/claude-agent.md S1 사용)
-   - Codex: /ask codex (합의 프롬프트 — templates/codex-agent.md S1 사용)
-   - Gemini: /ask gemini (합의 프롬프트 — templates/gemini-agent.md S1 사용)
+   - Codex: $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex (합의 프롬프트 — templates/codex-agent.md S1 사용)
+   - Gemini: $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh gemini (합의 프롬프트 — templates/gemini-agent.md S1 사용)
    이 단계에서 구현을 함께 지시하면 안 됨
 
 3. 응답 수신 + 리드 응답 (MANDATORY):
@@ -14,12 +14,12 @@
      - SendMessage 자동 수신
      - 마커 파싱 (AGREE/COUNTER/CLARIFY)
      - 리드 -> SendMessage(recipient=에이전트명, content=응답)
-   CCB 에이전트:
+   tmux-bridge 에이전트:
      - pend로 수집
      - 마커 파싱 (round_id/team_id 확인)
-     - AGREE -> CONSENSUS 문서 생성 (CCB에 확인 메시지 불필요 — stateless)
-     - COUNTER -> /ask codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 재제안: ..."
-     - CLARIFY -> /ask codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 추가 정보: ..."
+     - AGREE -> CONSENSUS 문서 생성 (tmux-bridge에 확인 메시지 불필요 — stateless)
+     - COUNTER -> tmux-ask.sh codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 재제안: ..."
+     - CLARIFY -> tmux-ask.sh codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 추가 정보: ..."
 
 4. 응답별 리드 행동:
    Claude 에이전트:
@@ -34,10 +34,10 @@
        -> 추가 정보 제공
        -> SendMessage: 답변 + "검토 후 다시 응답해주세요"
        -> 에이전트 재응답 대기
-   CCB 에이전트:
-     AGREE -> CONSENSUS 문서 생성 (확인 메시지 불필요 — CCB는 stateless)
-     COUNTER -> /ask codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 재제안: ..."
-     CLARIFY -> /ask codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 추가 정보: ..."
+   tmux-bridge 에이전트:
+     AGREE -> CONSENSUS 문서 생성 (확인 메시지 불필요 — tmux-bridge는 stateless)
+     COUNTER -> tmux-ask.sh codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 재제안: ..."
+     CLARIFY -> tmux-ask.sh codex/gemini "[FOLLOW-UP — {team_id} — R{N} — parent:R{N-1}] 추가 정보: ..."
 
 5. 합의 루프 반복 (max 5 rounds)
 6. 전체 CONSENSUS 도달 -> Phase 5로

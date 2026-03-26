@@ -33,8 +33,8 @@ run_test "[Standards] validate-standards.sh" "$SCRIPTS_DIR/validate-standards.sh
 # Marker consistency (python)
 run_test "[Markers]   test_markers.py"    python3 "$SCRIPTS_DIR/test_markers.py"
 
-# CCB connectivity (python, always exit 0)
-run_test "[CCB]       test_ccb.py"        python3 "$SCRIPTS_DIR/test_ccb.py"
+# tmux-bridge connectivity (python, always exit 0)
+run_test "[Bridge]    test_connectivity.py" python3 "$SCRIPTS_DIR/test_connectivity.py"
 
 # Gate marker validation
 run_test "[Gates]     validate-gates.sh"  "$SCRIPTS_DIR/validate-gates.sh"

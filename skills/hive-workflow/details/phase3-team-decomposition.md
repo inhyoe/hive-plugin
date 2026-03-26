@@ -26,8 +26,8 @@ Step C: 의존성 → 실행 순서 (topological sort)
 | 작업 성격 | Provider | 이유 |
 |-----------|----------|------|
 | 핵심 로직 / 아키텍처 설계 | **Claude** (Agent tool) | 복잡한 추론, 설계 판단 |
-| 직접 구현 / 리팩터링 | **Codex** (`/ask codex`) | 코드 생성 강점, 구체적 파일 수정 |
-| 사전 리서치 / 체크리스트 / 문서 | **Gemini** (`/ask gemini`) | 대량 토큰, 반복 작업 |
+| 직접 구현 / 리팩터링 | **Codex** (`$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex`) | 코드 생성 강점, 구체적 파일 수정 |
+| 사전 리서치 / 체크리스트 / 문서 | **Gemini** (`$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh gemini`) | 대량 토큰, 반복 작업 |
 | 간단한 수정 / 설정 | **Claude haiku** (Agent tool) | 빠른 처리, 저비용 |
 | TDD 격리 (Phase 5) | `hive-tdd-pipeline` §1 참조 | Claude=테스트, Codex=구현, Gemini=검증 |
 

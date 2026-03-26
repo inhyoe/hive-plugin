@@ -184,7 +184,7 @@ Hiveは`hooks/hooks.json`を通じてClaude Codeフックを登録します：
 
 - **Claude Code CLI**（最新版）
 - **Serena MCPサーバー** — Phase 2コードベース分析用
-- **CCBブリッジ** — Codex/Gemini統合（オプションだが完全なマルチプロバイダーオーケストレーションに推奨）
+- **tmux-bridge** — Codex/Gemini統合（オプションだが完全なマルチプロバイダーオーケストレーションに推奨）
 - **Node.js** — リアルタイムダッシュボード用
 
 ## インストール

@@ -184,7 +184,7 @@ Hive는 `hooks/hooks.json`을 통해 Claude Code 훅을 등록합니다:
 
 - **Claude Code CLI** (최신 버전)
 - **Serena MCP 서버** — Phase 2 코드베이스 분석용
-- **CCB 브릿지** — Codex/Gemini 통합 (선택사항이나 완전한 멀티 프로바이더 오케스트레이션에 권장)
+- **tmux-bridge** — Codex/Gemini 통합 (선택사항이나 완전한 멀티 프로바이더 오케스트레이션에 권장)
 - **Node.js** — 실시간 대시보드용
 
 ## 설치

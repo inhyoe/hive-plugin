@@ -2,9 +2,9 @@
 
 1. **Codex 연결 확인:**
    ```bash
-   ccb-ping codex
+   $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex --ping
    ```
-   - 실패 시: "Codex가 실행 중이 아닙니다. `ccb codex`로 시작해주세요." 출력 후 **중단**.
+   - 실패 시: "Codex가 실행 중이 아닙니다. tmux-bridge로 시작해주세요." 출력 후 **중단**.
 
 2. **베이스 브랜치 감지:**
    ```bash
@@ -35,7 +35,7 @@
    diff 내용을 임시 파일(`{tmpdir}/auto-review-diff.txt`)에 저장 후 실행. 출력을 `review_prompt`로 사용.
 3. 실행:
    ```bash
-   CCB_CALLER=claude ask codex "{review_prompt}"
+   $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex "{review_prompt}"
    ```
 4. 출력: `Auto Review Loop 시작 — Codex processing...`
 5. **턴 즉시 종료** (Async Guardrail 준수).
@@ -87,7 +87,7 @@
      ```
    - 실행:
      ```bash
-     CCB_CALLER=claude ask codex "{verify_prompt}"
+     $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex "{verify_prompt}"
      ```
    - 출력: `Auto Review Loop — Iteration {N}/{max} — Codex processing...`
    - **턴 즉시 종료**.

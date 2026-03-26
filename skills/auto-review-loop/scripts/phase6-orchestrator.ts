@@ -24,7 +24,9 @@ function validateEntry(): { valid: boolean; reason?: string } {
 }
 
 function checkCodexAvailable(): boolean {
-  const result = spawnSync("ccb-ping", ["codex"], { encoding: "utf-8" });
+  const result = spawnSync("node", [
+    "hooks/tmux-bridge/dist/cli.js", "status", "--reconcile", "--provider", "codex"
+  ], { encoding: "utf-8" });
   return result.status === 0;
 }
 
