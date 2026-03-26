@@ -321,7 +321,8 @@ describe('useHiveStore', () => {
     const state = useHiveStore.getState();
     expect(state.lead.status).toBe('idle');
     expect(state.sessionId).toBe('session-1');
-    expect(state.workers).toEqual({});
+    // Workers preserved so results panel can display final stats
+    expect(Object.keys(state.workers)).toHaveLength(2);
     expect(state.eventLog.at(-1)).toEqual(event);
   });
 

@@ -1,75 +1,377 @@
 #!/usr/bin/env bash
+# install.sh — Symlink-based global installer for hive-plugin
+#
+# Makes the hive plugin available in all Claude Code projects by creating
+# symlinks in ~/.claude/ (or a custom CLAUDE_HOME).
+#
+# Usage:
+#   ./install.sh                        # Install to ~/.claude/
+#   ./install.sh --claude-home PATH     # Install to custom directory
+#   ./install.sh --uninstall            # Remove all installed components
+#   ./install.sh --dry-run              # Preview without changes
+#   ./install.sh --uninstall --claude-home PATH
+
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_DIR="${HOME}/.config/claude-auto-debug"
-CONFIG_FILE="${CONFIG_DIR}/config.env"
-SYSTEMD_USER_DIR="${HOME}/.config/systemd/user"
-SERVICE_SOURCE="${SCRIPT_DIR}/systemd/auto-debug.service"
-TIMER_TEMPLATE_SOURCE="${SCRIPT_DIR}/systemd/auto-debug.timer.template"
-SERVICE_TARGET="${SYSTEMD_USER_DIR}/auto-debug.service"
-TIMER_TARGET="${SYSTEMD_USER_DIR}/auto-debug.timer"
+###############################################################################
+# Constants
+###############################################################################
 
-read_config_value() {
-    local key="$1"
-    local file="$2"
-    local default_value="$3"
-    local line
+REPO_ROOT="$(cd "$(dirname "$0")" && pwd)"
 
-    line="$(grep -E "^${key}=" "$file" | tail -n 1 || true)"
-    if [[ -z "$line" ]]; then
-        printf '%s\n' "$default_value"
-        return
+SKILL_NAMES=(
+  hive
+  hive-workflow
+  hive-consensus
+  hive-spawn-templates
+  hive-quality-gates
+  hive-tdd-pipeline
+)
+
+HOOKS_JSON="$REPO_ROOT/hooks/hooks.json"
+
+###############################################################################
+# Defaults
+###############################################################################
+
+CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
+DRY_RUN=false
+UNINSTALL=false
+
+###############################################################################
+# Parse arguments
+###############################################################################
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --claude-home)
+      CLAUDE_HOME="$2"
+      shift 2
+      ;;
+    --dry-run)
+      DRY_RUN=true
+      shift
+      ;;
+    --uninstall)
+      UNINSTALL=true
+      shift
+      ;;
+    -h|--help)
+      echo "Usage: $0 [--claude-home PATH] [--uninstall] [--dry-run]"
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
+###############################################################################
+# Pre-checks
+###############################################################################
+
+if [[ ! -f "$REPO_ROOT/.claude-plugin/plugin.json" ]]; then
+  echo "ERROR: Must run from hive-plugin repo root (.claude-plugin/plugin.json not found)" >&2
+  exit 1
+fi
+
+if ! command -v jq &>/dev/null; then
+  echo "ERROR: jq is required. Install with: sudo apt install jq" >&2
+  exit 1
+fi
+
+VERSION="$(jq -r '.version' "$REPO_ROOT/.claude-plugin/plugin.json")"
+
+###############################################################################
+# Helpers
+###############################################################################
+
+info() {
+  echo "[hive-plugin] $*"
+}
+
+dry_info() {
+  echo "[dry-run] would: $*"
+}
+
+# safe_symlink TARGET LINK_PATH
+# Creates a symlink at LINK_PATH pointing to TARGET.
+# If LINK_PATH exists as a real directory, backs it up to .bak first.
+# If LINK_PATH exists as a symlink, removes it first.
+safe_symlink() {
+  local target="$1"
+  local link_path="$2"
+
+  if $DRY_RUN; then
+    if [[ -d "$link_path" && ! -L "$link_path" ]]; then
+      dry_info "backup directory $link_path -> ${link_path}.bak"
     fi
+    dry_info "symlink $link_path -> $target"
+    return
+  fi
 
-    printf '%s\n' "${line#*=}"
+  # If it's a real directory (not a symlink), back it up
+  if [[ -d "$link_path" && ! -L "$link_path" ]]; then
+    local bak="${link_path}.bak"
+    # Avoid collision with existing .bak
+    if [[ -e "$bak" ]]; then
+      bak="${link_path}.bak.$(date +%Y%m%d%H%M%S)"
+    fi
+    info "Backing up existing directory: $link_path -> $bak"
+    mv "$link_path" "$bak"
+  fi
+
+  # If it's an existing symlink, warn if it points elsewhere, then replace
+  if [[ -L "$link_path" ]]; then
+    local current_target
+    current_target="$(readlink -f "$link_path" 2>/dev/null || true)"
+    if [[ "$current_target" != "$target" && "$current_target" != "$(readlink -f "$target" 2>/dev/null)" ]]; then
+      info "WARNING: Replacing existing symlink $link_path (was -> $current_target)"
+    fi
+    rm "$link_path"
+  fi
+
+  ln -s "$target" "$link_path"
+  info "Symlinked: $link_path -> $target"
 }
 
-escape_sed_replacement() {
-    printf '%s' "$1" | sed 's/[\/&]/\\&/g'
+# safe_remove_symlink LINK_PATH
+# Removes a symlink only if it points into REPO_ROOT
+safe_remove_symlink() {
+  local link_path="$1"
+
+  if [[ ! -L "$link_path" ]]; then
+    return
+  fi
+
+  local actual_target
+  actual_target="$(readlink -f "$link_path" 2>/dev/null || true)"
+
+  # Only remove if it points into our repo (exact match or child path)
+  if [[ "$actual_target" == "$REPO_ROOT"/* || "$actual_target" == "$REPO_ROOT" ]]; then
+    if $DRY_RUN; then
+      dry_info "remove symlink $link_path"
+    else
+      rm "$link_path"
+      info "Removed symlink: $link_path"
+    fi
+  fi
 }
 
-mkdir -p "$CONFIG_DIR" "$SYSTEMD_USER_DIR"
+###############################################################################
+# Install: Skills
+###############################################################################
 
-if [[ ! -f "$CONFIG_FILE" ]]; then
-    install -m 0644 "${SCRIPT_DIR}/config.example.env" "$CONFIG_FILE"
-    echo "Created default config at $CONFIG_FILE"
-fi
+install_skills() {
+  local skills_dir="$CLAUDE_HOME/skills"
 
-INTERVAL="$(read_config_value "INTERVAL" "$CONFIG_FILE" "6h")"
-INTERVAL="${INTERVAL%$'\r'}"
+  if $DRY_RUN; then
+    dry_info "create directory $skills_dir"
+  else
+    mkdir -p "$skills_dir"
+  fi
 
-if [[ -z "$INTERVAL" ]]; then
-    INTERVAL="6h"
-fi
+  for skill in "${SKILL_NAMES[@]}"; do
+    safe_symlink "$REPO_ROOT/skills/$skill" "$skills_dir/$skill"
+  done
+}
 
-if [[ "$INTERVAL" == \"*\" && "$INTERVAL" == *\" ]]; then
-    INTERVAL="${INTERVAL:1:-1}"
-elif [[ "$INTERVAL" == \'*\' && "$INTERVAL" == *\' ]]; then
-    INTERVAL="${INTERVAL:1:-1}"
-fi
+uninstall_skills() {
+  local skills_dir="$CLAUDE_HOME/skills"
 
-if [[ "$INTERVAL" == *$'\n'* ]]; then
-    echo "INTERVAL must be a single-line value" >&2
-    exit 1
-fi
+  for skill in "${SKILL_NAMES[@]}"; do
+    safe_remove_symlink "$skills_dir/$skill"
+  done
+}
 
-escaped_interval="$(escape_sed_replacement "$INTERVAL")"
-rendered_timer="$(mktemp)"
-trap 'rm -f "$rendered_timer"' EXIT
+###############################################################################
+# Install: Legacy cleanup
+###############################################################################
 
-sed "s/%%INTERVAL%%/${escaped_interval}/g" "$TIMER_TEMPLATE_SOURCE" > "$rendered_timer"
+cleanup_legacy() {
+  local legacy="$CLAUDE_HOME/commands/hive.md"
 
-install -m 0644 "$SERVICE_SOURCE" "$SERVICE_TARGET"
-install -m 0644 "$rendered_timer" "$TIMER_TARGET"
+  if [[ -f "$legacy" ]]; then
+    if $DRY_RUN; then
+      dry_info "backup and remove legacy $legacy"
+    else
+      cp "$legacy" "${legacy}.bak"
+      rm "$legacy"
+      info "Legacy hive.md backed up and removed"
+    fi
+  fi
+}
 
-systemctl --user daemon-reload
-systemctl --user enable --now auto-debug.timer
+###############################################################################
+# Install: Scripts & Dashboard symlinks
+###############################################################################
 
-echo "Installed user units:"
-echo "  $SERVICE_TARGET"
-echo "  $TIMER_TARGET"
-echo "For 24/7 operation outside an active login session, run:"
-echo '  loginctl enable-linger $(whoami)'
-echo "Config is stored at $CONFIG_FILE"
-echo "Set PROJECT_DIR in that file before relying on automated runs."
+install_scripts_symlink() {
+  safe_symlink "$REPO_ROOT/scripts" "$CLAUDE_HOME/hive-scripts"
+}
+
+install_dashboard_symlink() {
+  safe_symlink "$REPO_ROOT/dashboard" "$CLAUDE_HOME/hive-dashboard"
+}
+
+uninstall_scripts_symlink() {
+  safe_remove_symlink "$CLAUDE_HOME/hive-scripts"
+}
+
+uninstall_dashboard_symlink() {
+  safe_remove_symlink "$CLAUDE_HOME/hive-dashboard"
+}
+
+###############################################################################
+# Install: Dashboard npm install (non-fatal)
+###############################################################################
+
+install_dashboard_deps() {
+  local dashboard_dir="$REPO_ROOT/dashboard"
+  if [[ -f "$dashboard_dir/package.json" && ! -d "$dashboard_dir/node_modules" ]]; then
+    if $DRY_RUN; then
+      dry_info "npm install in $dashboard_dir"
+    else
+      info "Installing dashboard dependencies..."
+      (cd "$dashboard_dir" && npm install 2>/dev/null) || info "npm install skipped (non-fatal)"
+    fi
+  fi
+}
+
+###############################################################################
+# Install: Hooks merge
+###############################################################################
+
+# Merge plugin hooks into settings.json, preserving existing user hooks.
+# Idempotent: identifies plugin hooks by _tag field, not command content.
+HIVE_HOOK_TAG="hive-plugin"
+
+install_hooks() {
+  local settings="$CLAUDE_HOME/settings.json"
+
+  if $DRY_RUN; then
+    dry_info "merge hooks into $settings"
+    return
+  fi
+
+  # Read current settings or start with empty object
+  local current_settings
+  if [[ -f "$settings" ]]; then
+    current_settings="$(cat "$settings")"
+  else
+    current_settings='{}'
+  fi
+
+  # Ensure .hooks exists
+  current_settings="$(echo "$current_settings" | jq 'if .hooks == null then .hooks = {} else . end')"
+
+  # Read hooks.json template and substitute CLAUDE_PLUGIN_ROOT
+  local plugin_hooks
+  plugin_hooks="$(sed "s|\${CLAUDE_PLUGIN_ROOT}|$REPO_ROOT|g" "$HOOKS_JSON")"
+
+  # Get the list of event types from plugin hooks
+  local event_types
+  event_types="$(echo "$plugin_hooks" | jq -r '.hooks | keys[]')"
+
+  for event_type in $event_types; do
+    # Ensure the event type array exists in current settings
+    current_settings="$(echo "$current_settings" | jq \
+      --arg et "$event_type" \
+      'if .hooks[$et] == null then .hooks[$et] = [] else . end')"
+
+    # Remove any existing hive-plugin tagged entries (clean re-install)
+    current_settings="$(echo "$current_settings" | jq \
+      --arg et "$event_type" \
+      --arg tag "$HIVE_HOOK_TAG" \
+      '.hooks[$et] = [.hooks[$et][] | select(._tag != $tag)]')"
+
+    # Get plugin entries for this event type, inject _tag for identification
+    local plugin_entries
+    plugin_entries="$(echo "$plugin_hooks" | jq -c \
+      --arg tag "$HIVE_HOOK_TAG" \
+      ".hooks[\"$event_type\"][] | . + {\"_tag\": \$tag}")"
+
+    # Add each tagged entry
+    while IFS= read -r entry; do
+      [[ -z "$entry" ]] && continue
+      current_settings="$(echo "$current_settings" | jq \
+        --arg et "$event_type" \
+        --argjson entry "$entry" \
+        '.hooks[$et] += [$entry]')"
+    done <<< "$plugin_entries"
+    info "Added $event_type hook"
+  done
+
+  echo "$current_settings" | jq '.' > "$settings"
+  info "Hooks merged into $settings"
+}
+
+# Remove plugin hooks from settings.json (entries with _tag == "hive-plugin").
+# Preserves all user hooks. Removes empty event type arrays.
+uninstall_hooks() {
+  local settings="$CLAUDE_HOME/settings.json"
+
+  if [[ ! -f "$settings" ]]; then
+    return
+  fi
+
+  if $DRY_RUN; then
+    dry_info "remove plugin hooks from $settings"
+    return
+  fi
+
+  local current_settings
+  current_settings="$(cat "$settings")"
+
+  # Get all event types
+  local event_types
+  event_types="$(echo "$current_settings" | jq -r '.hooks // {} | keys[]' 2>/dev/null || true)"
+
+  for event_type in $event_types; do
+    # Filter out entries tagged as hive-plugin
+    current_settings="$(echo "$current_settings" | jq \
+      --arg et "$event_type" \
+      --arg tag "$HIVE_HOOK_TAG" \
+      '.hooks[$et] = [.hooks[$et][] | select(._tag != $tag)]')"
+  done
+
+  # Remove event types that became empty arrays
+  current_settings="$(echo "$current_settings" | jq \
+    '.hooks = (.hooks | to_entries | map(select(.value | length > 0)) | from_entries)')"
+
+  echo "$current_settings" | jq '.' > "$settings"
+  info "Plugin hooks removed from $settings"
+}
+
+###############################################################################
+# Main
+###############################################################################
+
+main() {
+  if $UNINSTALL; then
+    info "Uninstalling hive-plugin from $CLAUDE_HOME..."
+    uninstall_skills
+    uninstall_scripts_symlink
+    uninstall_dashboard_symlink
+    uninstall_hooks
+    info "Uninstall complete."
+  else
+    info "Installing hive-plugin v${VERSION} to $CLAUDE_HOME..."
+    install_skills
+    cleanup_legacy
+    install_scripts_symlink
+    install_dashboard_symlink
+    install_hooks
+    install_dashboard_deps
+    info "Hive plugin v${VERSION} installed successfully!"
+    info ""
+    info "Components:"
+    info "  Skills:    $CLAUDE_HOME/skills/hive (+ 5 sub-skills)"
+    info "  Scripts:   $CLAUDE_HOME/hive-scripts"
+    info "  Dashboard: $CLAUDE_HOME/hive-dashboard"
+    info "  Hooks:     merged into $CLAUDE_HOME/settings.json"
+  fi
+}
+
+main

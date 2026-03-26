@@ -6,7 +6,7 @@
 
 Orchestrate multi-provider AI teams (Claude, Codex, Gemini) through a research-backed quality pipeline. Hive decomposes complex tasks into team-based modules, enforces consensus-driven planning, and executes through a strict TDD pipeline — all with real-time visualization.
 
-```
+```text
 /hive "Add real-time chat feature"
 
   G1 CLARIFY ─→ G2 SPEC ─→ Prompt Eng ─→ Brainstorm ─→ Serena Context
@@ -54,7 +54,7 @@ Every gate emits a marker file. **No marker = no progress.**
 
 ### Agent Isolation (CodeDelegator Pattern)
 
-```
+```text
 Agent A (Claude)           Agent B (Codex)          Agent C (Gemini)
 ├─ Writes tests from SPEC  ├─ Implements code        ├─ Mutation/PBT verification
 ├─ Cannot see impl code    ├─ Cannot see test intent ├─ Cannot see process
@@ -113,7 +113,7 @@ cd dashboard/server && npm run dev   # WebSocket event server
 
 ### Project Structure
 
-```
+```text
 hive-plugin/
 ├── skills/                     # 6 skill modules (1,778 lines total)
 │   ├── hive/                   # Entrypoint — phase router, hard gates, provider rules
@@ -139,8 +139,8 @@ hive-plugin/
 ├── systemd/                    # Auto-debug timer (periodic validation)
 ├── .claude-plugin/plugin.json  # Plugin manifest
 ├── marketplace.json            # Plugin marketplace registration
-├── install.sh                  # Systemd auto-debug installer
-└── uninstall.sh                # Systemd auto-debug remover
+├── install-systemd.sh          # Systemd auto-debug installer
+└── uninstall-systemd.sh        # Systemd auto-debug remover
 ```
 
 ### Skills
@@ -201,10 +201,20 @@ Markers are stored as files to prevent conversation context bloat. Only `[G1 ✓
 
 ### Manual Installation
 
-Copy all skill directories to your Claude Code skills folder:
+The install script creates symlinks, so `git pull` automatically updates all projects that use Hive.
 
 ```bash
-cp -r skills/* ~/.claude/skills/
+# Install (creates symlinks — git pull updates all projects automatically)
+bash install.sh
+
+# Preview without changes
+bash install.sh --dry-run
+
+# Install to a custom Claude home
+bash install.sh --claude-home /path/to/.claude
+
+# Uninstall
+bash install.sh --uninstall
 ```
 
 ### Auto-Debug Timer (Optional)
@@ -213,13 +223,13 @@ Sets up a systemd timer for periodic validation:
 
 ```bash
 # Install
-bash install.sh
+bash install-systemd.sh
 
 # Configure
 vim ~/.config/claude-auto-debug/config.env  # Set PROJECT_DIR
 
 # Uninstall
-bash uninstall.sh
+bash uninstall-systemd.sh
 ```
 
 ## Usage
@@ -236,7 +246,7 @@ The quality pipeline activates automatically:
 2. **G2 SPEC** — A 6-section spec is generated for your approval
 3. **Phase 0-3** — Prompt engineering, brainstorming, codebase analysis, team decomposition
 4. **G3 PLAN REVIEW** — Designer and reviewer debate the plan (score >= 7.0 to pass)
-5. **Phase 4** — Each team reaches consensus via AGREE/COUNTER/CLARIFY
+5. **Phase 4** — Each team reaches consensus via AGREE/COUNTER/CLARIFY (validated by `validate-phase5-entry.sh`)
 6. **G4-G7** — TDD pipeline: tests first (RED), implementation (GREEN), cross-verification, E2E validation
 
 ## Validation

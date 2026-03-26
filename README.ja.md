@@ -6,7 +6,7 @@
 
 マルチプロバイダーAIチーム（Claude、Codex、Gemini）を研究に基づいた品質パイプラインでオーケストレーションします。複雑なタスクをチームベースのモジュールに分解し、コンセンサス駆動の設計を強制し、厳格なTDDパイプラインで実行します — リアルタイム可視化ダッシュボード付き。
 
-```
+```text
 /hive "リアルタイムチャット機能を追加"
 
   G1 CLARIFY ─→ G2 SPEC ─→ プロンプトEng ─→ ブレスト ─→ Serenaコンテキスト
@@ -54,7 +54,7 @@
 
 ### エージェント分離（CodeDelegatorパターン）
 
-```
+```text
 Agent A (Claude)           Agent B (Codex)          Agent C (Gemini)
 ├─ SPEC基準テスト作成       ├─ コード実装              ├─ ミューテーション/PBT検証
 ├─ 実装コードアクセス不可    ├─ テスト意図アクセス不可   ├─ プロセスアクセス不可
@@ -113,7 +113,7 @@ cd dashboard/server && npm run dev   # WebSocketイベントサーバー
 
 ### プロジェクト構成
 
-```
+```text
 hive-plugin/
 ├── skills/                     # 6スキルモジュール（合計1,778行）
 │   ├── hive/                   # エントリポイント — Phaseルーター、ハードゲート、プロバイダールール
@@ -139,8 +139,8 @@ hive-plugin/
 ├── systemd/                    # Auto-debugタイマー（定期検証）
 ├── .claude-plugin/plugin.json  # プラグインマニフェスト
 ├── marketplace.json            # プラグインマーケットプレイス登録
-├── install.sh                  # Systemd auto-debugインストーラー
-└── uninstall.sh                # Systemd auto-debugアンインストーラー
+├── install-systemd.sh          # Systemd auto-debugインストーラー
+└── uninstall-systemd.sh        # Systemd auto-debugアンインストーラー
 ```
 
 ### スキル
@@ -201,10 +201,20 @@ Hiveは`hooks/hooks.json`を通じてClaude Codeフックを登録します：
 
 ### 手動インストール
 
-全スキルディレクトリをClaude Codeスキルフォルダにコピーします：
+インストールスクリプトはシンボリックリンクを作成するため、`git pull`だけでHiveを使用する全プロジェクトが自動更新されます。
 
 ```bash
-cp -r skills/* ~/.claude/skills/
+# インストール（シンボリックリンク作成 — git pullで全プロジェクト自動更新）
+bash install.sh
+
+# 変更なしでプレビュー
+bash install.sh --dry-run
+
+# カスタムClaudeホームにインストール
+bash install.sh --claude-home /path/to/.claude
+
+# アンインストール
+bash install.sh --uninstall
 ```
 
 ### Auto-Debugタイマー（オプション）
@@ -213,13 +223,13 @@ cp -r skills/* ~/.claude/skills/
 
 ```bash
 # インストール
-bash install.sh
+bash install-systemd.sh
 
 # 設定
 vim ~/.config/claude-auto-debug/config.env  # PROJECT_DIRを指定
 
 # アンインストール
-bash uninstall.sh
+bash uninstall-systemd.sh
 ```
 
 ## 使い方
@@ -236,7 +246,7 @@ bash uninstall.sh
 2. **G2 SPEC** — 6セクション仕様が生成され承認を要求
 3. **Phase 0-3** — プロンプトエンジニアリング、ブレスト、コードベース分析、チーム分解
 4. **G3 PLAN REVIEW** — DesignerとReviewerが計画を討論（スコア >= 7.0で通過）
-5. **Phase 4** — 各チームがAGREE/COUNTER/CLARIFYでコンセンサス
+5. **Phase 4** — 各チームがAGREE/COUNTER/CLARIFYでコンセンサス（`validate-phase5-entry.sh`で検証）
 6. **G4-G7** — TDDパイプライン：テスト先行（RED）、実装（GREEN）、交差検証、E2E検証
 
 ## 検証
