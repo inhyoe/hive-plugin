@@ -12,41 +12,8 @@ user-invocable: false
 
 ## Event Emission (Dashboard 연동)
 
-각 Phase 진입/종료 시 아래 패턴으로 이벤트를 발행합니다:
-
-```
-SID 읽기 (모든 emit 호출에서 사용):
-  SID=$(cat .hive-state/session-id 2>/dev/null || echo "no-session")
-
-Phase 진입 시:
-  Bash("SID=$(cat .hive-state/session-id 2>/dev/null || echo no-session) && bash $HIVE_PLUGIN_DIR/dashboard/scripts/emit-event.sh phase.transition $SID '{\"phase\":N,\"status\":\"enter\"}'" || true)
-
-Phase 종료 시:
-  Bash("SID=$(cat .hive-state/session-id 2>/dev/null || echo no-session) && bash $HIVE_PLUGIN_DIR/dashboard/scripts/emit-event.sh phase.transition $SID '{\"phase\":N,\"status\":\"exit\"}'" || true)
-
-Gate 통과 시:
-  Bash("SID=$(cat .hive-state/session-id 2>/dev/null || echo no-session) && bash $HIVE_PLUGIN_DIR/dashboard/scripts/emit-event.sh gate.update $SID '{\"gate\":\"G1\",\"status\":\"passed\"}'" || true)
-
-팀 생성 시 (Phase 3):
-  Bash("SID=$(cat .hive-state/session-id 2>/dev/null || echo no-session) && bash $HIVE_PLUGIN_DIR/dashboard/scripts/emit-event.sh team.created $SID '{\"teamId\":\"T1\",\"modules\":[\"auth\"],\"provider\":\"claude\",\"agentName\":\"a1\"}'" || true)
-
-에이전트 상태 변경 시:
-  Bash("SID=$(cat .hive-state/session-id 2>/dev/null || echo no-session) && bash $HIVE_PLUGIN_DIR/dashboard/scripts/emit-event.sh agent.status $SID '{\"teamId\":\"T1\",\"provider\":\"claude\",\"status\":\"working\",\"currentTask\":\"구현 중\"}'" || true)
-
-이벤트 발행 순서 (MANDATORY):
-  consensus.update를 agent.status보다 먼저 발행해야 한다.
-  COUNTER/CLARIFY 수신 시:
-    1. emit consensus.update (response: "COUNTER"/"CLARIFY")  ← 먼저
-    2. emit agent.status (status: "working")                   ← 나중
-  AGREE 수신 후 최종 완료 시:
-    1. emit consensus.update (response: "AGREE")               ← 먼저
-    2. emit agent.status (status: "done")                      ← 나중
-  잘못된 순서 (agent.status done → consensus.update COUNTER)는
-  대시보드에서 에이전트가 done으로 잘못 표시되는 버그를 유발한다.
-
-핵심: 환경변수는 Bash() 호출 간 유지 안 됨 → .hive-state/session-id 파일에서 매번 읽음.
-emit-event.sh 부재/실패 시 워크플로우는 중단하지 않음 (|| true 필수).
-```
+> 상세: `details/event-emission.md` 참조. Read-Gate가 자동 로드.
+> 핵심: consensus.update를 agent.status보다 먼저 발행. emit 실패 시 워크플로우 중단 안 함 (|| true).
 
 ---
 
@@ -345,28 +312,7 @@ Step C: 의존성 → 실행 순서 (topological sort)
 
 팀 구성안을 아래 형식으로 사용자에게 표시:
 
-```markdown
-## Hive Team Plan
-
-### 프로바이더 분배
-| Provider | 모듈 수 | 비율 | 역할 |
-|----------|--------|------|------|
-| Claude   | N개    | 55%  | 핵심 로직, 아키텍처 |
-| Codex    | N개    | 25%  | 직접 구현, 리팩터링 |
-| Gemini   | N개    | 20%  | 리서치, 테스트, 문서 |
-
-### 실행 순서: T1 → T2 → [T3, T4] (병렬) → T5
-
-| 팀 ID | 모듈 | 에이전트 | Provider | 태스크 요약 |
-|-------|------|---------|----------|------------|
-| T1-xxx | module_a | agent-a | Claude sonnet | ... |
-| T2-xxx | module_b | agent-b | **Codex** | ... |
-| T3-xxx | module_c | agent-c | **Codex** | ... |
-| T4-xxx | module_d | agent-d | Gemini | ... |
-
-### 의존성
-T2 blocked_by: [T1]
-```
+형식: 프로바이더 분배 테이블 (Claude 55%/Codex 25%/Gemini 20%) + 실행 순서 + 팀별 모듈/에이전트/Provider/태스크 + 의존성 (blocked_by).
 
 **필수 검증**: 대규모(6+)에서 Codex 직접 구현 모듈 최소 2개, 중소(3-5)에서 최소 1개 포함 확인.
 
@@ -420,7 +366,7 @@ Codex 에이전트 (직접 구현 — MANDATORY):
     (토큰 제한 고려 — 전체 파일 대신 관련 섹션 허용)
   → 파일명 + 수정할 함수/클래스 수준의 구체적 지시
   → 정적 분석 실행 요청 (프로젝트 린터/분석기 — Codex quick scan)
-  → Async Guardrail 준수 (CCB_ASYNC_SUBMITTED 마커 → 턴 종료)
+  → Async Guardrail 준수 (HIVE_ASYNC_SUBMITTED 마커 → 턴 종료)
   → round_id/team_id 마커 포함 (예: [HIVE IMPLEMENTATION — T2 — W1])
 Gemini 에이전트:
   $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh gemini "$PROMPT"

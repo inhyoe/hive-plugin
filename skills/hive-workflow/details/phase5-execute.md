@@ -23,20 +23,20 @@ Claude 에이전트:
   → description에 팀 식별자 포함, isolation="worktree"
   → CONSENSUS 문서 + Serena 컨텍스트를 프롬프트에 포함
 Codex 에이전트 (직접 구현 — MANDATORY):
-  /ask codex "파일 내용 + 구체적 수정 지시"
+  $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex "파일 내용 + 구체적 수정 지시"
   → 수정 대상 심볼의 전체 코드 + 참조 타입/인터페이스 시그니처 + 관련 import 포함
     (토큰 제한 고려 — 전체 파일 대신 관련 섹션 허용)
   → 파일명 + 수정할 함수/클래스 수준의 구체적 지시
   → 정적 분석 실행 요청 (프로젝트 린터/분석기 — Codex quick scan)
-  → Async Guardrail 준수 (CCB_ASYNC_SUBMITTED → 턴 종료)
+  → Async Guardrail 준수 (HIVE_ASYNC_SUBMITTED → 턴 종료)
   → round_id/team_id 마커 포함 (예: [HIVE IMPLEMENTATION — T2 — W1])
 Gemini 에이전트:
-  /ask gemini "$PROMPT"
-  → 동일 CCB 패턴
+  $HIVE_PLUGIN_DIR/scripts/tmux-ask.sh gemini "$PROMPT"
+  → 동일 tmux-bridge 패턴
 ```
 
-**실행 순서**: Claude Agent tool 호출을 먼저 실행 (병렬 스폰), 이후 CCB /ask 호출.
-CCB async guardrail로 인해 /ask 후 턴 종료되므로, Claude 에이전트를 먼저 스폰해야 한다.
+**실행 순서**: Claude Agent tool 호출을 먼저 실행 (병렬 스폰), 이후 tmux-bridge 호출.
+tmux-bridge async guardrail로 인해 ask 후 턴 종료되므로, Claude 에이전트를 먼저 스폰해야 한다.
 Codex는 사후 리뷰가 아닌 **병렬 구현자**로 참여한다.
 
 **정적 분석 하이브리드**: Codex가 quick scan 실행, 리드가 모든 Wave 완료 후
@@ -53,8 +53,8 @@ Claude 에이전트:
      - CONSENSUS 위반 → 관련 항목 인용 + 올바른 방향 제시
   3. 에이전트 완료 보고 → CONSENSUS 대비 검증 후 피드백
 
-CCB 에이전트:
-  pend로 수집 → CCB_DONE marker 확인
+tmux-bridge 에이전트:
+  pend로 수집 → HIVE_DONE marker 확인
   COUNTER/CLARIFY 마커 발견 시 → /ask로 재응답 (무시 금지)
 
 Wave 완료 조건: 해당 Wave 모든 팀 completed → 다음 Wave 실행
@@ -87,14 +87,14 @@ Phase 5 실패 시 **동일 프롬프트 재시도 금지**. 원인 분류 후 �
 | 잘못된 방향 | 구현이 CONSENSUS와 불일치 | CONSENSUS 부분 무효화 + 재합의 | Phase 4 재진입 (해당 팀만) |
 | 요구사항 오해 | 결과가 사용자 의도와 불일치 | 요구사항 재명확화 | Phase 1 재진입 (hive-consensus §10-1 전체 무효화) |
 | 기술적 장벽 | API 미지원, 라이브러리 한계 | 대안 접근 탐색 + 팀 재구성 | Phase 3 재진입 (해당 팀 무효화) |
-| CCB 타임아웃 | soft 3min 미응답 → hard 10min | pend 재확인 → LEAD DECISION | Phase 4 (hive-consensus §4) |
+| tmux-bridge 타임아웃 | soft 3min 미응답 → hard 10min | pend 재확인 → LEAD DECISION | Phase 4 (hive-consensus §4) |
 
 분석: 원인 분류 → 프롬프트 재작성(hive-spawn-templates §3) → 패턴 기록(auto-memory) → 재진입(hive-consensus §10-1 무효화 매트릭스).
 동일 팀 최대 3회 재시도. 3회 실패 시 AskUserQuestion: 리드 직접 처리 / 팀 제외 / 전체 중단.
 
 ## 5-5. 셧다운 + 최종 출력
 
-모든 Wave 완료 후: Claude 에이전트 SendMessage(shutdown), CCB idle_timeout 종료.
+모든 Wave 완료 후: Claude 에이전트 SendMessage(shutdown), tmux-bridge idle_timeout 종료.
 최종 출력: `| 팀 | 상태 | 변경 파일 | 합의 라운드 |` + 총 변경 요약.
 
 ---
@@ -119,7 +119,7 @@ RESULT의 `reviewer` 필드에 따라:
 
 | reviewer | 실행 방식 |
 |----------|----------|
-| `codex` | `CCB_CALLER=claude ask codex "$PROMPT"` → Async Guardrail 준수 |
+| `codex` | `$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex "$PROMPT"` → Async Guardrail 준수 |
 | `claude-team` | `Agent(description="Phase6-Review", prompt="$PROMPT", subagent_type="general-purpose", isolation="worktree")` |
 
 Codex 미연결 시 skip이 아닌 **Claude Team 자동 생성**으로 대체.

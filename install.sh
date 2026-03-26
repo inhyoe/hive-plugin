@@ -26,6 +26,7 @@ SKILL_NAMES=(
   hive-spawn-templates
   hive-quality-gates
   hive-tdd-pipeline
+  auto-review-loop
 )
 
 HOOKS_JSON="$REPO_ROOT/hooks/hooks.json"
@@ -89,6 +90,14 @@ VERSION="$(jq -r '.version' "$REPO_ROOT/.claude-plugin/plugin.json")"
 
 info() {
   echo "[hive-plugin] $*"
+}
+
+ok() {
+  echo "[hive-plugin] OK: $*"
+}
+
+warn() {
+  echo "[hive-plugin] WARN: $*"
 }
 
 dry_info() {
@@ -240,6 +249,39 @@ install_dashboard_deps() {
 }
 
 ###############################################################################
+# Install: Build hook artifacts (enforcer, tmux-bridge)
+###############################################################################
+
+build_hook_artifacts() {
+  local hook_dirs=("$REPO_ROOT/hooks/enforcer" "$REPO_ROOT/hooks/tmux-bridge")
+  for hook_dir in "${hook_dirs[@]}"; do
+    local hook_name
+    hook_name="$(basename "$hook_dir")"
+    if [[ -f "$hook_dir/package.json" ]]; then
+      if $DRY_RUN; then
+        dry_info "build $hook_name"
+        continue
+      fi
+      if [[ -d "$hook_dir/dist" ]]; then
+        info "Building $hook_name..."
+        if (cd "$hook_dir" && npm install --silent 2>/dev/null && npm run build --silent 2>/dev/null); then
+          ok "$hook_name (built)"
+        else
+          warn "$hook_name (build failed — hooks may not work)"
+        fi
+      else
+        info "Installing $hook_name..."
+        if (cd "$hook_dir" && npm install --silent 2>/dev/null); then
+          ok "$hook_name (installed)"
+        else
+          warn "$hook_name (install failed)"
+        fi
+      fi
+    fi
+  done
+}
+
+###############################################################################
 # Install: Hooks merge
 ###############################################################################
 
@@ -345,6 +387,159 @@ uninstall_hooks() {
 }
 
 ###############################################################################
+# Install: MCP servers (serena)
+###############################################################################
+
+install_mcp_servers() {
+  if $DRY_RUN; then
+    dry_info "install/register serena MCP server"
+    return
+  fi
+
+  local serena_bin
+  serena_bin="$(command -v serena 2>/dev/null || true)"
+
+  # Install serena if not found
+  if [[ -z "$serena_bin" ]]; then
+    info "Installing serena..."
+    if pip install serena --quiet 2>/dev/null; then
+      serena_bin="$(command -v serena 2>/dev/null || true)"
+      ok "serena (pip installed)"
+    else
+      warn "serena (pip install failed)"
+      return
+    fi
+  else
+    info "serena already installed: $serena_bin"
+  fi
+
+  [[ -z "$serena_bin" ]] && return
+
+  # --- Claude MCP registration ---
+  local claude_mcp="$CLAUDE_HOME/.mcp.json"
+  if [[ -f "$claude_mcp" ]] && grep -q "serena" "$claude_mcp" 2>/dev/null; then
+    info "serena MCP already in Claude"
+  else
+    info "Registering serena in Claude .mcp.json..."
+    if [[ ! -f "$claude_mcp" ]]; then
+      echo '{"mcpServers":{}}' > "$claude_mcp"
+    fi
+    if python3 -c "
+import json
+with open('$claude_mcp') as f:
+    d = json.load(f)
+d.setdefault('mcpServers', {})
+d['mcpServers']['serena-shared'] = {
+    'command': '$serena_bin',
+    'args': ['--project-root', '.']
+}
+with open('$claude_mcp', 'w') as f:
+    json.dump(d, f, indent=2)
+" 2>/dev/null; then
+      ok "serena MCP (registered in Claude)"
+    else
+      warn "serena MCP (Claude registration failed)"
+    fi
+  fi
+
+  # --- Codex MCP registration ---
+  local codex_dir="${HOME}/.codex"
+  mkdir -p "$codex_dir"
+  if grep -q "serena" "$codex_dir/config.toml" 2>/dev/null; then
+    info "serena already in Codex"
+  else
+    info "Registering serena in Codex..."
+    cat >> "$codex_dir/config.toml" << 'TOML'
+
+[mcp_servers.serena]
+command = "serena"
+args = ["--project-root", "."]
+TOML
+    ok "serena MCP (registered in Codex)"
+  fi
+
+  # --- Gemini MCP registration ---
+  local gemini_dir="${HOME}/.gemini"
+  mkdir -p "$gemini_dir"
+  if [[ -f "$gemini_dir/settings.json" ]] && grep -q "serena" "$gemini_dir/settings.json" 2>/dev/null; then
+    info "serena already in Gemini"
+  else
+    info "Registering serena in Gemini..."
+    # Create settings.json if it doesn't exist (bug fix from PR #12)
+    if [[ ! -f "$gemini_dir/settings.json" ]]; then
+      echo '{"mcpServers":{}}' > "$gemini_dir/settings.json"
+    fi
+    if python3 -c "
+import json
+path = '$gemini_dir/settings.json'
+with open(path) as f:
+    d = json.load(f)
+d.setdefault('mcpServers', {})
+d['mcpServers']['serena-shared'] = {
+    'command': 'serena',
+    'args': ['--project-root', '.']
+}
+with open(path, 'w') as f:
+    json.dump(d, f, indent=2)
+" 2>/dev/null; then
+      ok "serena MCP (registered in Gemini)"
+    else
+      warn "serena MCP (Gemini registration failed)"
+    fi
+  fi
+}
+
+###############################################################################
+# Install: Check/install provider CLIs
+###############################################################################
+
+check_provider_clis() {
+  if $DRY_RUN; then
+    dry_info "check provider CLIs (tmux, codex, gemini)"
+    return
+  fi
+
+  # tmux (required for provider communication)
+  if command -v tmux &>/dev/null; then
+    ok "tmux ($(tmux -V 2>/dev/null || echo 'installed'))"
+  else
+    info "Installing tmux..."
+    if sudo apt-get install -y tmux &>/dev/null 2>&1; then
+      ok "tmux (installed)"
+    else
+      warn "tmux (install failed — required for provider communication)"
+      info "Manual: sudo apt install tmux"
+    fi
+  fi
+
+  # codex
+  if command -v codex &>/dev/null; then
+    ok "codex ($(codex --version 2>/dev/null || echo 'installed'))"
+  else
+    info "Installing codex CLI..."
+    if npm install -g @openai/codex 2>/dev/null; then
+      ok "codex (installed)"
+    else
+      warn "codex (install failed)"
+      info "Manual: npm install -g @openai/codex"
+    fi
+  fi
+
+  # gemini
+  if command -v gemini &>/dev/null; then
+    ok "gemini (installed)"
+  else
+    info "Installing gemini CLI..."
+    if npm install -g @google/gemini-cli 2>/dev/null; then
+      ok "gemini (installed)"
+    else
+      warn "gemini (install failed)"
+      info "Manual: npm install -g @google/gemini-cli"
+    fi
+  fi
+}
+
+###############################################################################
 # Main
 ###############################################################################
 
@@ -362,15 +557,20 @@ main() {
     cleanup_legacy
     install_scripts_symlink
     install_dashboard_symlink
+    build_hook_artifacts
     install_hooks
     install_dashboard_deps
+    install_mcp_servers
+    check_provider_clis
     info "Hive plugin v${VERSION} installed successfully!"
     info ""
     info "Components:"
-    info "  Skills:    $CLAUDE_HOME/skills/hive (+ 5 sub-skills)"
+    info "  Skills:    $CLAUDE_HOME/skills/hive (+ ${#SKILL_NAMES[@]} sub-skills)"
     info "  Scripts:   $CLAUDE_HOME/hive-scripts"
     info "  Dashboard: $CLAUDE_HOME/hive-dashboard"
     info "  Hooks:     merged into $CLAUDE_HOME/settings.json"
+    info "  MCP:       serena registered (Claude/Codex/Gemini)"
+    info "  CLIs:      tmux, codex, gemini checked"
   fi
 }
 

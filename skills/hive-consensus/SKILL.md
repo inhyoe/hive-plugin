@@ -18,7 +18,7 @@ user-invocable: false
 3. **건설적 반론**: 기술적 문제 발견 시 COUNTER는 의무 (무조건 수락 금지)
 4. **대등한 위치**: 리드와 에이전트는 기술적 논의에서 동등한 발언권
 5. **효율적 토론**: 라운드 상한 5회 내에서 핵심 집중
-6. **양방향 대화 필수**: 리드는 에이전트 응답에 반드시 응답 — Claude Agent는 SendMessage, CCB는 /ask (일방적 결과 수집 금지)
+6. **양방향 대화 필수**: 리드는 에이전트 응답에 반드시 응답 — Claude Agent는 SendMessage, tmux-bridge는 tmux-ask.sh (일방적 결과 수집 금지)
 7. **Phase 분리 필수**: 합의(Phase 4)와 구현(Phase 5)은 별도 프롬프트/스폰 (합치기 금지)
 8. **Plan Review 상호 토론**: Phase 4 합의 전 G3 상호 토론 필수 (hive-quality-gates §4). Designer↔Reviewer 다중 라운드 debate. 합의 불가 시 Gemini 중재.
 
@@ -146,7 +146,7 @@ IF CLARIFY:
 - 마커 기반 파싱: `[AGREE — {팀 ID}]`, `[COUNTER — {팀 ID}]`, `[CLARIFY — {팀 ID}]` 마커로 응답 유형 식별
 - `HIVE_DONE` = 응답 완료
 - 마커 없이 응답이 오면 → 전체 내용을 파싱하여 의도 추론
-- Async Guardrail: `CCB_ASYNC_SUBMITTED` → 턴 종료, pend로 나중에 수집
+- Async Guardrail: `HIVE_ASYNC_SUBMITTED` → 턴 종료, pend로 나중에 수집
 
 ### tmux-bridge Correlation Keys (split-brain 방지)
 
