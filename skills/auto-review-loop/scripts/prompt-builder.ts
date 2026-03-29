@@ -195,6 +195,63 @@ NO ISSUES FOUND
 ${fileList}`;
 }
 
+export function buildCodeReviewerPrompt(files: string[], baseBranch: string): string {
+  const fileList = files.map((f, i) => `${i + 1}. ${f}`).join("\n");
+
+  return `Review this implementation against the project's plan and coding standards.
+
+Files to review (read each one directly):
+${fileList}
+
+Base branch: ${baseBranch}
+
+Review for:
+1. Code correctness and alignment with plan
+2. Security concerns
+3. Error handling adequacy
+4. Thread-safety issues
+5. Test coverage
+
+Categorize findings as:
+
+### CRITICAL (must fix — runtime failures, security, data loss)
+**C1. [file:line] description**
+
+### IMPORTANT (should fix — correctness, design issues)
+**I1. [file:line] description**
+
+### SUGGESTIONS (nice to have — skip if none)
+**S1. description**
+
+If no issues found, respond exactly: NO ISSUES FOUND`;
+}
+
+export function buildCodeReviewerVerifyPrompt(
+  issues: Array<{file?: string; line?: number; description: string}>,
+  fixDiff: string
+): string {
+  const issueList = issues
+    .map((i, idx) => `${idx + 1}. ${i.file ? `[${i.file}:${i.line || 0}]` : ""} ${i.description}`)
+    .join("\n");
+
+  return `Verify that previously reported issues have been correctly fixed.
+
+Previous issues:
+${issueList}
+
+Fix diff:
+--- FIX DIFF START ---
+${fixDiff}
+--- FIX DIFF END ---
+
+Check:
+1. Each issue is properly addressed
+2. Fixes don't introduce new problems
+3. Read the actual files to verify
+
+### CRITICAL / ### IMPORTANT / ### SUGGESTIONS format, or: NO ISSUES FOUND`;
+}
+
 // Unwrap ParsedReview wrapper or accept ReviewIssue[] directly
 function extractIssues(raw: unknown): ReviewIssue[] {
   if (Array.isArray(raw)) return raw;
@@ -257,6 +314,29 @@ if (import.meta.main) {
         ? (filesData as any).files
         : [];
     console.log(buildClaudeTeamPrompt(files, reviewDir));
+  } else if (type === "code-reviewer") {
+    const filesPath = filesIdx !== -1 ? args[filesIdx + 1] : null;
+    const baseIdx2 = args.indexOf("--base");
+    const base = baseIdx2 !== -1 ? args[baseIdx2 + 1] : "main";
+    if (!filesPath) { console.error("--files required for code-reviewer"); process.exit(1); }
+    const filesData = JSON.parse(await Bun.file(filesPath).text());
+    const files: string[] = Array.isArray(filesData) ? filesData : (filesData as any).files || [];
+    console.log(buildCodeReviewerPrompt(files, base));
+  } else if (type === "code-reviewer-verify") {
+    if (!diffPath) { console.error("--diff required"); process.exit(1); }
+    const diff = await Bun.file(diffPath).text();
+    const issuesPath = issuesIdx !== -1 ? args[issuesIdx + 1] : null;
+    let issues: Array<{file?: string; line?: number; description: string}> = [];
+    if (issuesPath) {
+      try {
+        const raw = JSON.parse(await Bun.file(issuesPath).text());
+        issues = Array.isArray(raw) ? raw : (raw && typeof raw === "object" && Array.isArray(raw.issues)) ? raw.issues : [];
+      } catch (e) {
+        console.error(`Failed to parse issues file '${issuesPath}': ${e instanceof Error ? e.message : e}`);
+        process.exit(1);
+      }
+    }
+    console.log(buildCodeReviewerVerifyPrompt(issues, diff));
   } else {
     console.error("Unknown type: " + type);
     process.exit(1);

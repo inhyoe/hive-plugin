@@ -135,6 +135,45 @@ P1 사전검증 → P2 리뷰요청 → P3 수정+검증 → P4 완료
 
 5. 백그라운드 pend 완료 → Phase 3 처음부터 반복.
 
+## Dual Reviewer (Codex + code-reviewer Agent)
+
+모든 리뷰(Phase 2, Phase 3, Phase 6)에서 Codex와 superpowers:code-reviewer Agent를 **병렬로** 실행합니다.
+
+### 리뷰 요청 (병렬)
+
+1. **Codex 리뷰** (기존 tmux-bridge 방식):
+   ```bash
+   Bash("$HIVE_PLUGIN_DIR/scripts/tmux-ask.sh codex '{review_prompt}' --purpose review")
+   Bash("$HIVE_PLUGIN_DIR/scripts/tmux-pend.sh codex --timeout 600 --keep", run_in_background=true)
+   ```
+
+2. **code-reviewer Agent** (동시 실행):
+   ```
+   Agent(description="Code Review", subagent_type="superpowers:code-reviewer", prompt="{cr_prompt}", run_in_background=true)
+   ```
+
+### 결과 파싱
+
+두 백그라운드 작업 완료 후:
+- Codex 응답: `review-parser.ts --input /tmp/codex-response.txt`
+- code-reviewer 응답: `code-reviewer-parser.ts --input /tmp/cr-response.txt`
+
+code-reviewer-parser는 `### CRITICAL` + `### IMPORTANT` 이슈만 추출, `### SUGGESTIONS`는 무시.
+
+### 이슈 합산
+
+1. Codex 이슈 + code-reviewer 이슈를 합산
+2. 동일 `file:line` 조합은 중복 제거 (Codex 이슈 우선)
+3. 합산된 이슈가 0개 → Phase 4 (완료) 진행
+
+### Verify (양쪽 모두)
+
+수정 후 verify도 양쪽 모두 실행:
+- Codex: `autonew codex → ask codex '{verify_prompt}'`
+- code-reviewer: `Agent(subagent_type="superpowers:code-reviewer", prompt="{cr_verify_prompt}")`
+
+양쪽 **모두** NO ISSUES FOUND일 때만 완료.
+
 ## Phase 4: 완료
 
 1. 모든 이슈 해소됨. 사용자에게 확인:
@@ -208,6 +247,15 @@ bun run ${CLAUDE_SKILL_DIR}/scripts/phase6-orchestrator.ts --base {base_branch} 
 | Codex 미연결 | claude-team | `Agent(description="Phase6-Review", prompt="{prompt}", isolation="worktree")` |
 
 Codex 미연결 시 **중단하지 않고** Claude Team을 생성하여 리뷰 수행.
+
+### 리뷰어 선택 (업데이트)
+
+| 조건 | 리뷰어 | 실행 |
+|------|--------|------|
+| Codex 연결됨 | codex + code-reviewer | 양쪽 병렬 실행 |
+| Codex 미연결 | claude-team + code-reviewer | 양쪽 병렬 실행 |
+
+code-reviewer Agent는 항상 사용 가능 (Agent tool 기반).
 
 ### 삭제된 파일 처리
 
